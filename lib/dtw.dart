@@ -1,37 +1,101 @@
 /* ChatGPT prompt:
 Please implement a direction-aware algorithm in dart wich compares two 2d
 line strings (polylines) based on dynamic time warp algorithm (DTW).
-2D point should be represented by dart:ui Offset class, possibly with an 
+2D point should be represented by dart:ui Offset class, possibly with an
 extension to Offset. Resampling of inputs is allowed.
 */
 
 import 'dart:math' as math;
 import 'dart:ui';
+import 'extensions/offset_vector_ext.dart';
 
-/// ============================================================
-/// Offset extensions
-/// ============================================================
+double polylineLength(List<Offset> points) {
+  double sum = 0.0;
 
-// TODO: move to single extension
-extension OffsetVectorExt on Offset {
-  double get lengthSquared => dx * dx + dy * dy;
-
-  double distanceTo(Offset other) => (this - other).distance;
-
-  double dot(Offset other) => dx * other.dx + dy * other.dy;
-
-  /// Signed angle between vectors in radians.
-  double signedAngleTo(Offset other) {
-    final cross = dx * other.dy - dy * other.dx;
-    final dotValue = dot(other);
-    return math.atan2(cross, dotValue);
+  for (int i = 1; i < points.length; i++) {
+    sum += (points[i] - points[i - 1]).distance;
   }
 
-  Offset normalized() {
-    final len = distance;
-    if (len == 0) return Offset.zero;
-    return this / len;
+  return sum;
+}
+
+List<Offset> tangents(List<Offset> points) {
+  final tangents = <Offset>[];
+
+  for (int i = 0; i < points.length; i++) {
+    Offset dir;
+
+    if (i == 0) {
+      dir = points[1] - points[0];
+    } else if (i == points.length - 1) {
+      dir = points[i] - points[i - 1];
+    } else {
+      dir = points[i + 1] - points[i - 1];
+    }
+
+    tangents.add(dir.normalized());
   }
+
+  return tangents;
+}
+
+/// Resamples a polyline into equally spaced points.
+///
+/// This is important because DTW behaves much better when both
+/// lines have approximately uniform sampling density.
+List<Offset> resample(List<Offset> points, int samples) {
+  if (points.length < 2) {
+    return List.of(points);
+  }
+
+  final totalLength = polylineLength(points);
+
+  if (totalLength == 0) {
+    return List.filled(samples, points.first);
+  }
+
+  final step = totalLength / (samples - 1);
+
+  final result = <Offset>[points.first];
+
+  double accumulated = 0.0;
+  int segmentIndex = 0;
+
+  Offset current = points.first;
+
+  while (result.length < samples - 1) {
+    final next = points[segmentIndex + 1];
+    final segment = next - current;
+    final segmentLength = segment.distance;
+
+    if (accumulated + segmentLength >= step) {
+      final remain = step - accumulated;
+      final t = remain / segmentLength;
+
+      final newPoint = Offset(
+        current.dx + segment.dx * t,
+        current.dy + segment.dy * t,
+      );
+
+      result.add(newPoint);
+
+      current = newPoint;
+      accumulated = 0.0;
+    } else {
+      accumulated += segmentLength;
+      segmentIndex++;
+
+      if (segmentIndex >= points.length - 1) {
+        break;
+      }
+
+      current = points[segmentIndex];
+    }
+  }
+
+  result.add(points.last);
+
+  return result;
 }
 
 /// ============================================================
@@ -39,65 +103,6 @@ extension OffsetVectorExt on Offset {
 /// ============================================================
 
 class PolylineDTW {
-  /// Resamples a polyline into equally spaced points.
-  ///
-  /// This is important because DTW behaves much better when both
-  /// lines have approximately uniform sampling density.
-  static List<Offset> resample(List<Offset> points, int samples) {
-    if (points.length < 2) {
-      return List.of(points);
-    }
-
-    final totalLength = _polylineLength(points);
-
-    if (totalLength == 0) {
-      return List.filled(samples, points.first);
-    }
-
-    final step = totalLength / (samples - 1);
-
-    final result = <Offset>[points.first];
-
-    double accumulated = 0.0;
-    int segmentIndex = 0;
-
-    Offset current = points.first;
-
-    while (result.length < samples - 1) {
-      final next = points[segmentIndex + 1];
-      final segment = next - current;
-      final segmentLength = segment.distance;
-
-      if (accumulated + segmentLength >= step) {
-        final remain = step - accumulated;
-        final t = remain / segmentLength;
-
-        final newPoint = Offset(
-          current.dx + segment.dx * t,
-          current.dy + segment.dy * t,
-        );
-
-        result.add(newPoint);
-
-        current = newPoint;
-        accumulated = 0.0;
-      } else {
-        accumulated += segmentLength;
-        segmentIndex++;
-
-        if (segmentIndex >= points.length - 1) {
-          break;
-        }
-
-        current = points[segmentIndex];
-      }
-    }
-
-    result.add(points.last);
-
-    return result;
-  }
-
   /// Direction-aware DTW distance between two polylines.
   ///
   /// Lower score means more similar.
@@ -112,7 +117,7 @@ class PolylineDTW {
   static double compare(
     List<Offset> a,
     List<Offset> b, {
-    int resampleCount = 64,
+    int resampleCount = 64, // TODO: no implicit resampling
     double directionWeight = 0.5,
     bool normalize = true,
   }) {
@@ -120,11 +125,12 @@ class PolylineDTW {
       throw ArgumentError('Both polylines must contain at least 2 points.');
     }
 
-    final aa = resample(a, resampleCount);
-    final bb = resample(b, resampleCount);
+    final resamplingNeeded = a.length != b.length;
+    final aa = resamplingNeeded ? resample(a, resampleCount) : a;
+    final bb = resamplingNeeded ? resample(b, resampleCount) : b;
 
-    final ta = _tangents(aa);
-    final tb = _tangents(bb);
+    final ta = tangents(aa);
+    final tb = tangents(bb);
 
     final n = aa.length;
     final m = bb.length;
@@ -163,40 +169,6 @@ class PolylineDTW {
     }
 
     return score / (n + m);
-  }
-
-  /// ============================================================
-  /// Internals
-  /// ============================================================
-
-  static double _polylineLength(List<Offset> points) {
-    double sum = 0.0;
-
-    for (int i = 1; i < points.length; i++) {
-      sum += (points[i] - points[i - 1]).distance;
-    }
-
-    return sum;
-  }
-
-  static List<Offset> _tangents(List<Offset> points) {
-    final tangents = <Offset>[];
-
-    for (int i = 0; i < points.length; i++) {
-      Offset dir;
-
-      if (i == 0) {
-        dir = points[1] - points[0];
-      } else if (i == points.length - 1) {
-        dir = points[i] - points[i - 1];
-      } else {
-        dir = points[i + 1] - points[i - 1];
-      }
-
-      tangents.add(dir.normalized());
-    }
-
-    return tangents;
   }
 }
 
