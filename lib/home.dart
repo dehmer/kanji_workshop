@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:kanji_workshop/signal_extensions.dart';
-import 'package:kanji_workshop/path_painter.dart';
+import 'package:kanji_workshop/scene_painter.dart';
 import 'package:kanji_workshop/database.dart';
 import 'package:kanji_workshop/vector.dart';
 import 'package:kanji_workshop/scene.dart';
@@ -11,17 +11,6 @@ const kankenLevel = 4;
 const strokeWidth = 5.0;
 const double canvasDimension = 150;
 const scale = canvasDimension / vgDimension;
-
-final black = Paint()
-  ..style = PaintingStyle.stroke
-  ..color = Colors.black
-  ..strokeWidth = strokeWidth
-  ..strokeCap = StrokeCap.round
-  ..strokeJoin = StrokeJoin.round;
-
-final gray = Paint.from(black)..color = Color(0xffd0d0d0);
-final red = Paint.from(black)..color = Color(0xffff0000);
-final blue = Paint.from(black)..color = Color.fromARGB(255, 110, 133, 237);
 
 typedef LerpCallback = void Function(double t);
 typedef VoidFunction = void Function();
@@ -48,24 +37,6 @@ class Home extends StatelessWidget {
     Scene(onMatch: onMatch),
   );
 
-  // Optimization: Don't create strokePath on each Scene change,
-  // extract strokes first.
-  late final strokes = scene.map((scene) => scene.strokes);
-  late final strokesPath = strokes.map(offsetsPath);
-  late final path = computed(
-    () => offsetsPath([...scene.value.previous, scene.value.current]),
-  );
-
-  late final previous = scene.map((scene) => scene.previous);
-  late final previousPath = previous.map(offsetsPath);
-  late final current = scene.map((scene) => scene.current);
-  late final frame = scene.map((scene) => scene.frame);
-
-  late final animationPath = computed(() {
-    final stroke = frame.value.isNotEmpty ? frame.value : current.value;
-    return offsetsPath([stroke]);
-  });
-
   Home({super.key}) {
     onNext();
   }
@@ -80,6 +51,8 @@ class Home extends StatelessWidget {
     void end() => command.value = AnimationEnd(stroke);
     animate(callback: callback, end: end);
   }
+
+  // Forward drag events to scene.
 
   void onPanStart(DragStartDetails details) =>
       command.value = DragStart(details.localPosition);
@@ -133,21 +106,11 @@ class Home extends StatelessWidget {
                   color: Colors.white70,
                   border: Border.all(color: Colors.black12, width: 2.0),
                 ),
-                child: Stack(
-                  children: [
-                    CustomPaint(
-                      painter: PathPainter(strokesPath.watch(context), gray),
-                      size: Size.infinite,
-                    ),
-                    CustomPaint(
-                      painter: PathPainter(previousPath.watch(context), black),
-                      size: Size.infinite,
-                    ),
-                    CustomPaint(
-                      painter: PathPainter(animationPath.watch(context), black),
-                      size: Size.infinite,
-                    ),
-                  ],
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: ScenePainter(scene.watch(context)),
+                    size: Size.infinite,
+                  ),
                 ),
               ),
             ),

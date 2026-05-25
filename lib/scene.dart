@@ -8,8 +8,8 @@ sealed class SceneCommand {}
 class NullCommand extends SceneCommand {}
 
 class Initialize extends SceneCommand {
-  final PolylineList strokes;
-  Initialize(this.strokes);
+  final PolylineList template;
+  Initialize(this.template);
 }
 
 class Reset extends SceneCommand {}
@@ -42,7 +42,6 @@ class AnimationEnd extends SceneCommand {
 @immutable
 class Scene {
   final void Function(Polyline, Polyline) onMatch;
-  final PolylineList strokes;
   final PolylineList template;
   final PolylineList previous;
   final Polyline current;
@@ -50,26 +49,22 @@ class Scene {
 
   const Scene({
     required this.onMatch,
-    PolylineList? strokes,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
     Polyline? frame,
-  }) : strokes = strokes ?? const [],
-       template = template ?? const [],
+  }) : template = template ?? const [],
        previous = previous ?? const [],
        current = current ?? const [],
        frame = frame ?? const [];
 
   Scene copyWith({
-    PolylineList? strokes,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
     Polyline? frame,
   }) => Scene(
     onMatch: this.onMatch,
-    strokes: strokes ?? this.strokes,
     template: template ?? this.template,
     previous: previous ?? this.previous,
     current: current ?? this.current,
@@ -89,7 +84,7 @@ class Scene {
 
   Scene initialize(Initialize command) {
     return copyWith(
-      strokes: command.strokes,
+      template: command.template,
       previous: [],
       current: [],
       frame: [],
@@ -98,17 +93,17 @@ class Scene {
 
   Scene dragEnd(DragEnd _) {
     final index = previous.length;
-    final stroke = strokes[index];
-    final current = resample(this.current, stroke.length);
+    final template = this.template[index];
+    final current = resample(this.current, template.length);
     final directionWeight = 0.5;
     final distance = PolylineDTW.compare(
-      stroke,
+      template,
       current,
       directionWeight: directionWeight,
     );
 
     if (distance < 10.0) {
-      onMatch(current, stroke);
+      onMatch(current, template);
       return copyWith(current: []);
     } else {
       // Reset attempt.
