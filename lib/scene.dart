@@ -100,14 +100,14 @@ class Scene {
     final index = previous.length;
     final stroke = strokes[index];
     final current = resample(this.current, stroke.length);
-    final directionWeight = 0.7;
+    final directionWeight = 0.5;
     final distance = PolylineDTW.compare(
       stroke,
       current,
       directionWeight: directionWeight,
     );
 
-    if (distance < 8) {
+    if (distance < 10.0) {
       onMatch(current, stroke);
       return copyWith(current: []);
     } else {

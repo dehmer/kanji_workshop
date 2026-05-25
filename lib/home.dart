@@ -29,9 +29,12 @@ typedef VoidFunction = void Function();
 void animate({required LerpCallback callback, required VoidFunction end}) {
   var t = 0.0;
   Timer.periodic(Duration(milliseconds: 16), (timer) {
-    while (t < 1.0) callback((t += 0.2).clamp(0.0, 1.0));
-    timer.cancel();
-    end();
+    if (t < 1.0)
+      callback((t += 0.1).clamp(0.0, 1.0));
+    else {
+      timer.cancel();
+      end();
+    }
   });
 }
 
