@@ -111,6 +111,7 @@ class Scene {
       onMatch(current, stroke);
       return copyWith(current: []);
     } else {
+      // Reset attempt.
       return copyWith(previous: [], current: []);
     }
   }
