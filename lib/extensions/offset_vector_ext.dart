@@ -5,7 +5,6 @@ import 'dart:ui';
 /// Offset extensions
 /// ============================================================
 
-// TODO: move to single extension
 extension OffsetVectorExt on Offset {
   double get lengthSquared => dx * dx + dy * dy;
 

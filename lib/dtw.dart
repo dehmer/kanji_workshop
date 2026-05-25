@@ -7,7 +7,7 @@ extension to Offset. Resampling of inputs is allowed.
 
 import 'dart:math' as math;
 import 'dart:ui';
-import 'extensions/offset_vector_ext.dart';
+import 'package:kanji_workshop/extensions/offset_vector_ext.dart';
 
 double polylineLength(List<Offset> points) {
   double sum = 0.0;
@@ -117,9 +117,8 @@ class PolylineDTW {
   static double compare(
     List<Offset> a,
     List<Offset> b, {
-    int resampleCount = 64, // TODO: no implicit resampling
+    int resampleCount = 64,
     double directionWeight = 0.5,
-    bool normalize = true,
   }) {
     if (a.length < 2 || b.length < 2) {
       throw ArgumentError('Both polylines must contain at least 2 points.');
@@ -163,50 +162,6 @@ class PolylineDTW {
     }
 
     final score = dtw[n][m];
-
-    if (!normalize) {
-      return score;
-    }
-
     return score / (n + m);
   }
 }
-
-/* Usage:
-
-void main() {
-  final lineA = [
-    const Offset(0, 0),
-    const Offset(50, 0),
-    const Offset(100, 50),
-  ];
-
-  final lineB = [
-    const Offset(0, 0),
-    const Offset(40, 5),
-    const Offset(90, 55),
-  ];
-
-  final lineC = [
-    const Offset(100, 50),
-    const Offset(50, 0),
-    const Offset(0, 0),
-  ];
-
-  final ab = PolylineDTW.compare(
-    lineA,
-    lineB,
-    directionWeight: 0.7,
-  );
-
-  final ac = PolylineDTW.compare(
-    lineA,
-    lineC,
-    directionWeight: 0.7,
-  );
-
-  print('A vs B: $ab');
-  print('A vs reversed C: $ac');
-}
-
-*/

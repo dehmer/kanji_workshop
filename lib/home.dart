@@ -5,8 +5,7 @@ import 'signal_extensions.dart';
 import 'path_painter.dart';
 import 'database.dart';
 import 'vector.dart';
-import 'dtw.dart';
-import 'option.dart';
+import 'scene.dart';
 
 const kankenLevel = 3;
 const strokeWidth = 5.0;
@@ -24,151 +23,79 @@ final gray = Paint.from(black)..color = Color(0xffd0d0d0);
 final red = Paint.from(black)..color = Color(0xffff0000);
 final blue = Paint.from(black)..color = Color.fromARGB(255, 110, 133, 237);
 
-typedef LerpCallback = Polyline Function(double t);
-typedef EndCallback = Polyline Function();
+typedef LerpCallback = void Function(double t);
+typedef VoidFunction = void Function();
 
-class Animation {
-  final FlutterSignal<Polyline> target;
-  double t = 0;
-
-  Animation(this.target);
-
-  void start({required LerpCallback callback, required EndCallback end}) {
-    Timer.periodic(Duration(milliseconds: 16), (timer) {
-      target.value = callback(t);
-      t += 0.2;
-      if (t >= 1) {
-        timer.cancel();
-        t = 0;
-        target.value = end();
-      }
-    });
-  }
-}
-
-({FlutterSignal<Option<T>> signal, void Function(T) callback}) listen<T>() {
-  final signal = FlutterSignal<Option<T>>(None());
-  void callback(T event) => signal.value = Some(event);
-  return (signal: signal, callback: callback);
+void animate({required LerpCallback callback, required VoidFunction end}) {
+  var t = 0.0;
+  Timer.periodic(Duration(milliseconds: 16), (timer) {
+    while (t < 1.0) callback((t += 0.2).clamp(0.0, 1.0));
+    timer.cancel();
+    end();
+  });
 }
 
 class Home extends StatelessWidget {
-  final lerpSignal = signal<Polyline>([]);
-  late final lerpPath = lerpSignal.map((stroke) => offsetsPath([stroke]));
-  late final animation = Animation(lerpSignal);
+  final literals = signal<List<String>>([]);
+  final command = signal<SceneCommand>(NullCommand());
 
-  final pool = signal<List<String>>([]);
-  final templatePolylineList = signal<PolylineList>([]);
-  late final templatePath = templatePolylineList.map(offsetsPath);
-  final previous = signal<PolylineList>([]);
-  final current = signal<Polyline>([]);
-  final currentPaint = Signal<Paint>(black);
-
-  late final path = computed(
-    () => offsetsPath([...previous.value, current.value]),
+  late final scene = loop<Scene, SceneCommand>(
+    command,
+    (acc, command) => acc.reduce(command),
+    Scene(onMatch: onMatch),
   );
 
-  final dragStart = listen<DragStartDetails>();
-  final dragUpdate = listen<DragUpdateDetails>();
-  final dragEnd = listen<DragEndDetails>();
+  late final strokesPath = computed(() => offsetsPath(scene.value.strokes));
+
+  late final path = computed(
+    () => offsetsPath([...scene.value.previous, scene.value.current]),
+  );
+
+  late final animationFrame = computed(() => offsetsPath([scene.value.frame]));
 
   Home({super.key}) {
     onNext();
-
-    effect(() {
-      print(dragStart.signal.value);
-    });
   }
 
-  void onPanStart(DragStartDetails details) {
-    if (currentPaint.value == black) {
-      current.value = [details.localPosition];
+  void onMatch(Polyline current, Polyline stroke) {
+    void callback(t) {
+      Offset lerp(i) => Offset.lerp(current[i], stroke[i], t)!;
+      final frame = List.generate(stroke.length, lerp);
+      command.value = AnimationFrame(frame);
     }
+
+    void end() => command.value = AnimationEnd(stroke);
+    animate(callback: callback, end: end);
   }
 
-  void onPanUpdate(DragUpdateDetails details) {
-    // TODO: handle localPosition outside Container bounds
+  void onPanStart(DragStartDetails details) =>
+      command.value = DragStart(details.localPosition);
 
-    if (currentPaint.value == blue) {
-      return;
-    }
+  void onPanUpdate(DragUpdateDetails details) =>
+      command.value = DragUpdate(details.localPosition);
 
-    // Optimization - Discard position if same as last.
-    if (current.value.isEmpty) {
-      current.value = [...current.value, details.localPosition];
-    } else if (current.value.last != details.localPosition) {
-      current.value = [...current.value, details.localPosition];
-    } else {
-      // Drop duplicate position.
-    }
-  }
-
-  void onPanEnd(DragEndDetails details) {
-    if (currentPaint.value == blue) {
-      onNext();
-      return;
-    }
-
-    final index = previous.value.length;
-    final a = templatePolylineList.value[index];
-    final b = current.value;
-
-    final c = resample(b, a.length);
-    final distance = PolylineDTW.compare(
-      a,
-      c,
-      directionWeight: 0.7,
-      resampleCount: 48,
-      normalize: true,
-    );
-
-    if (distance < 10) {
-      current.value = [];
-      animation.start(
-        callback: (t) {
-          return List.generate(a.length, (i) {
-            return Offset.lerp(c[i], a[i], t.clamp(0.0, 1.0))!;
-          });
-        },
-        end: () {
-          previous.value = [...previous.value, a];
-          if (previous.value.length == templatePolylineList.value.length) {
-            currentPaint.value = blue;
-          }
-          return [];
-        },
-      );
-    } else {
-      current.value = [];
-      previous.value = [];
-    }
-  }
+  void onPanEnd(DragEndDetails details) =>
+      command.value = DragEnd(details.localPosition);
 
   void onNext() async {
-    if (pool.value.isEmpty) {
+    if (this.literals.value.isEmpty) {
       final literals = await DatabaseService.instance.randomKankenLiterals(
         kankenLevel,
       );
-      pool.value = literals;
+      this.literals.value = literals;
     }
 
-    final [head, ...tail] = pool.value;
-    pool.value = tail;
+    final [head, ...tail] = this.literals.value;
+    this.literals.value = tail;
     final strokes = await DatabaseService.instance.strokes(
       head,
       targetDimension: canvasDimension,
     );
 
-    templatePolylineList.value = strokes;
-    previous.value = [];
-    current.value = [];
-    currentPaint.value = black;
+    command.value = Initialize(strokes);
   }
 
-  void onClear() {
-    previous.value = [];
-    current.value = [];
-  }
+  void onClear() => command.value = Reset();
 
   @override
   Widget build(BuildContext context) {
@@ -186,9 +113,6 @@ class Home extends StatelessWidget {
               onPanStart: onPanStart,
               onPanUpdate: onPanUpdate,
               onPanEnd: onPanEnd,
-              // onPanStart: dragStart.callback,
-              // onPanUpdate: dragUpdate.callback,
-              // onPanEnd: dragEnd.callback,
               child: Container(
                 width: canvasDimension,
                 height: canvasDimension,
@@ -199,18 +123,18 @@ class Home extends StatelessWidget {
                 child: Stack(
                   children: [
                     CustomPaint(
-                      painter: PathPainter(templatePath.watch(context), gray),
+                      painter: PathPainter(strokesPath.watch(context), gray),
+                      size: Size.infinite,
+                    ),
+                    CustomPaint(
+                      painter: PathPainter(path.watch(context), black),
                       size: Size.infinite,
                     ),
                     CustomPaint(
                       painter: PathPainter(
-                        path.watch(context),
-                        currentPaint.watch(context),
+                        animationFrame.watch(context),
+                        black,
                       ),
-                      size: Size.infinite,
-                    ),
-                    CustomPaint(
-                      painter: PathPainter(lerpPath.watch(context), black),
                       size: Size.infinite,
                     ),
                   ],
