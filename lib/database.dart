@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:kanji_workshop/kanji_vg.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/services.dart';
+import 'package:kanji_workshop/polyline.dart' show PolylineList;
 
 const databaseName = "jisho.db";
 
@@ -69,42 +71,12 @@ class DatabaseService {
     return x;
   }
 
-  Future<List<List<Offset>>> strokes(
-    String literal, {
-    double targetDimension = 180.0,
-  }) async {
-    final sourceDimension = 110.0;
-    final factor = targetDimension / sourceDimension;
-    double scale(double num) => num * factor;
-    Offset offset(tuple) => Offset(tuple[0], tuple[1]);
-
-    final delimiter = RegExp(r'[ ML]');
-    List<double> split(String s) {
-      final [_, ...tokens] = s.split(delimiter);
-      return tokens.map((token) => double.parse(token)).toList();
-    }
-
-    List<List<T>> splitEvery<T>(int n, List<T> list) {
-      int idx = 0;
-      List<List<T>> acc = [];
-
-      while (idx < list.length) {
-        acc.add(list.sublist(idx, idx += n));
-      }
-
-      return acc;
-    }
+  Future<PolylineList> strokes(String literal) async {
+    final query =
+        "SELECT path FROM stroke WHERE literal = '$literal' ORDER BY idx";
 
     final database = await instance.database;
-    final result = await database.rawQuery(
-      "SELECT path FROM stroke WHERE literal = '$literal' ORDER BY idx",
-    );
-
-    List<Offset> parse(Map<String, Object?> row) {
-      final path = split(row['path']!.toString()).map(scale).toList();
-      return splitEvery(2, path).map(offset).toList();
-    }
-
-    return result.map(parse).toList();
+    final rows = await database.rawQuery(query);
+    return rows.map(parseRow((n) => n / dimension)).toList();
   }
 }

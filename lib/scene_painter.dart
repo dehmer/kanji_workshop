@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:kanji_workshop/scene.dart';
-import 'package:kanji_workshop/vector.dart';
+import 'package:kanji_workshop/polyline.dart';
 
 const strokeWidth = 6.0;
 final black = Paint()
@@ -29,6 +29,14 @@ class Dash {
   final Paint paint;
   const Dash({required this.width, required this.space, required this.paint});
 }
+
+final gridDash = Dash(
+  width: 6,
+  space: 4,
+  paint: Paint()
+    ..color = Colors.red
+    ..strokeWidth = 0.5,
+);
 
 void drawDashedLine({
   required Canvas canvas,
@@ -58,47 +66,58 @@ void drawDashedLine({
   }
 }
 
+Path offsetsPath(PolylineList pointList) {
+  final path = Path();
+  for (int i = 0; i < pointList.length; i++) {
+    path.addPolygon(pointList[i], false);
+  }
+
+  return path;
+}
+
+Path Function(PolylineList) createScaledPath(double s) {
+  return (list) {
+    final path = Path();
+    final scaled = scalePolylineList(s, list);
+    for (int i = 0; i < scaled.length; i++) {
+      path.addPolygon(scaled[i], false);
+    }
+
+    return path;
+  };
+}
+
 class ScenePainter extends CustomPainter {
-  final double width;
-  final double height;
+  final double dimension;
   final Scene scene;
 
-  const ScenePainter(this.scene, this.width, this.height);
+  const ScenePainter(this.scene, this.dimension);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final template = offsetsPath(scene.template);
-    final previous = offsetsPath(scene.previous);
-    final current = offsetsPath([
+    final createPath = createScaledPath(dimension);
+    final template = createPath(scene.template);
+    final previous = createPath(scene.previous);
+    final current = createPath([
       scene.frame.isEmpty ? scene.current : scene.frame,
     ]);
 
-    final dash = Dash(
-      width: 6,
-      space: 4,
-      paint: Paint()
-        ..color = Colors.red
-        ..strokeWidth = 0.5,
+    drawDashedLine(
+      canvas: canvas,
+      start: Offset(dimension / 2, 0),
+      end: Offset(dimension / 2, dimension),
+      dash: gridDash,
     );
 
     drawDashedLine(
       canvas: canvas,
-      start: Offset(width / 2, 0),
-      end: Offset(width / 2, height),
-      dash: dash,
+      start: Offset(0, dimension / 2),
+      end: Offset(dimension, dimension / 2),
+      dash: gridDash,
     );
 
-    drawDashedLine(
-      canvas: canvas,
-      start: Offset(0, height / 2),
-      end: Offset(width, height / 2),
-      dash: dash,
-    );
-
-    final complete = scene.template.length == scene.previous.length;
-
-    if (scene.templateVisible) canvas.drawPath(template, gray);
-    canvas.drawPath(previous, complete ? blue : black);
+    canvas.drawPath(template, gray);
+    canvas.drawPath(previous, black);
     canvas.drawPath(current, black);
   }
 

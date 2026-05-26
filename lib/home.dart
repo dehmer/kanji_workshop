@@ -4,13 +4,11 @@ import 'package:signals/signals_flutter.dart';
 import 'package:kanji_workshop/signal_extensions.dart';
 import 'package:kanji_workshop/scene_painter.dart';
 import 'package:kanji_workshop/database.dart';
-import 'package:kanji_workshop/vector.dart';
+import 'package:kanji_workshop/polyline.dart';
 import 'package:kanji_workshop/scene.dart';
 
 const kankenLevel = 2;
-const strokeWidth = 5.0;
-const double canvasDimension = 150;
-const scale = canvasDimension / vgDimension;
+const double canvasDimension = 150.0;
 
 typedef LerpCallback = void Function(double t);
 typedef VoidFunction = void Function();
@@ -55,13 +53,13 @@ class Home extends StatelessWidget {
   // Forward drag events to scene.
 
   void onPanStart(DragStartDetails details) =>
-      command.value = DragStart(details.localPosition);
+      command.value = DragStart(details.localPosition / canvasDimension);
 
   void onPanUpdate(DragUpdateDetails details) =>
-      command.value = DragUpdate(details.localPosition);
+      command.value = DragUpdate(details.localPosition / canvasDimension);
 
   void onPanEnd(DragEndDetails details) =>
-      command.value = DragEnd(details.localPosition);
+      command.value = DragEnd(details.localPosition / canvasDimension);
 
   void onNext() async {
     if (this.literals.value.isEmpty) {
@@ -73,11 +71,7 @@ class Home extends StatelessWidget {
 
     final [head, ...tail] = this.literals.value;
     this.literals.value = tail;
-    final strokes = await DatabaseService.instance.strokes(
-      head,
-      targetDimension: canvasDimension,
-    );
-
+    final strokes = await DatabaseService.instance.strokes(head);
     command.value = Initialize(strokes);
   }
 
@@ -114,7 +108,6 @@ class Home extends StatelessWidget {
                   child: CustomPaint(
                     painter: ScenePainter(
                       scene.watch(context),
-                      canvasDimension,
                       canvasDimension,
                     ),
                     size: Size.infinite,

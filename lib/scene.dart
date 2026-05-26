@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:kanji_workshop/dtw.dart';
-import 'package:kanji_workshop/vector.dart';
+import 'package:kanji_workshop/polyline.dart';
 
 sealed class SceneCommand {}
 
@@ -123,8 +123,12 @@ class Scene {
       directionWeight: directionWeight,
     );
 
-    if (distance < 10.0) onMatch(current, template);
-    return copyWith(current: []);
+    if (distance < 0.045) {
+      onMatch(current, template);
+      return copyWith(current: []);
+    } else {
+      return copyWith(previous: [], current: []);
+    }
   }
 
   Scene animationEnd(AnimationEnd command) {
