@@ -39,9 +39,15 @@ class AnimationEnd extends SceneCommand {
   AnimationEnd(this.current);
 }
 
+class ShowTemplate extends SceneCommand {
+  final bool visible;
+  ShowTemplate(this.visible);
+}
+
 @immutable
 class Scene {
   final void Function(Polyline, Polyline) onMatch;
+  final bool templateVisible;
   final PolylineList template;
   final PolylineList previous;
   final Polyline current;
@@ -49,22 +55,27 @@ class Scene {
 
   const Scene({
     required this.onMatch,
+    bool? templateVisible,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
     Polyline? frame,
-  }) : template = template ?? const [],
+    int? misses,
+  }) : templateVisible = templateVisible ?? true,
+       template = template ?? const [],
        previous = previous ?? const [],
        current = current ?? const [],
        frame = frame ?? const [];
 
   Scene copyWith({
+    bool? templateVisible,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
     Polyline? frame,
   }) => Scene(
     onMatch: this.onMatch,
+    templateVisible: templateVisible ?? this.templateVisible,
     template: template ?? this.template,
     previous: previous ?? this.previous,
     current: current ?? this.current,
@@ -73,12 +84,13 @@ class Scene {
 
   Scene reduce(SceneCommand command) => switch (command) {
     Initialize() => initialize(command),
-    DragStart(position: final p) => copyWith(current: [...current, p]),
-    DragUpdate(position: final p) => copyWith(current: [...current, p]),
+    DragStart() => dragStart(command),
+    DragUpdate() => dragUpdate(command),
     DragEnd() => dragEnd(command),
     Reset() => copyWith(previous: [], current: []),
     AnimationFrame(frame: final f) => copyWith(frame: f),
     AnimationEnd() => animationEnd(command),
+    ShowTemplate(visible: final v) => copyWith(templateVisible: v),
     NullCommand() => this,
   };
 
@@ -91,24 +103,28 @@ class Scene {
     );
   }
 
+  Scene dragStart(DragStart command) {
+    return copyWith(current: [...current, command.position]);
+  }
+
+  Scene dragUpdate(DragUpdate command) {
+    return copyWith(current: [...current, command.position]);
+  }
+
   Scene dragEnd(DragEnd _) {
     final index = previous.length;
     final template = this.template[index];
     final current = resample(this.current, template.length);
     final directionWeight = 0.5;
+
     final distance = PolylineDTW.compare(
       template,
       current,
       directionWeight: directionWeight,
     );
 
-    if (distance < 10.0) {
-      onMatch(current, template);
-      return copyWith(current: []);
-    } else {
-      // Reset attempt.
-      return copyWith(previous: [], current: []);
-    }
+    if (distance < 10.0) onMatch(current, template);
+    return copyWith(current: []);
   }
 
   Scene animationEnd(AnimationEnd command) {

@@ -7,7 +7,7 @@ import 'package:kanji_workshop/database.dart';
 import 'package:kanji_workshop/vector.dart';
 import 'package:kanji_workshop/scene.dart';
 
-const kankenLevel = 4;
+const kankenLevel = 2;
 const strokeWidth = 5.0;
 const double canvasDimension = 150;
 const scale = canvasDimension / vgDimension;
@@ -83,11 +83,15 @@ class Home extends StatelessWidget {
 
   void onClear() => command.value = Reset();
 
+  void onToggleTemplate() =>
+      command.value = ShowTemplate(!scene.value.templateVisible);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFfefdfa),
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primaryFixed,
+        backgroundColor: const Color(0xFFfefdfa),
         title: Text('Kanji Workshop'),
       ),
 
@@ -108,7 +112,11 @@ class Home extends StatelessWidget {
                 ),
                 child: RepaintBoundary(
                   child: CustomPaint(
-                    painter: ScenePainter(scene.watch(context)),
+                    painter: ScenePainter(
+                      scene.watch(context),
+                      canvasDimension,
+                      canvasDimension,
+                    ),
                     size: Size.infinite,
                   ),
                 ),
@@ -119,8 +127,13 @@ class Home extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton(onPressed: onNext, child: Text("Next")),
-                SizedBox(width: 40),
+                SizedBox(width: 20),
                 ElevatedButton(onPressed: onClear, child: Text("Clear")),
+                SizedBox(width: 20),
+                ElevatedButton(
+                  onPressed: onToggleTemplate,
+                  child: Text("Template"),
+                ),
               ],
             ),
           ],
