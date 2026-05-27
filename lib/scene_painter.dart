@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:kanji_workshop/scene.dart';
 import 'package:kanji_workshop/polyline.dart';
@@ -12,12 +11,10 @@ final black = Paint()
   ..strokeCap = StrokeCap.round
   ..strokeJoin = StrokeJoin.round;
 
-final gray = Paint.from(black)..color = Color(0xa0d0d0d0);
+final gray = Paint.from(black)..color = Color(0xffd0d0d0);
 final red = Paint.from(black)..color = Color(0xffff0000);
 final blue = Paint.from(black)..color = Color.fromARGB(255, 110, 133, 237);
-final ok = Paint.from(black)
-  ..strokeWidth = 8.0
-  ..color = Color.fromARGB(255, 110, 133, 237);
+final ok = Paint.from(black)..color = Color.fromARGB(255, 110, 133, 237);
 
 final hintPoint = Paint.from(black)
   ..color = Color(0xffff0000)
@@ -116,8 +113,12 @@ class ScenePainter extends CustomPainter {
       dash: gridDash,
     );
 
-    canvas.drawPath(template, gray);
-    canvas.drawPath(previous, black);
+    if (scene.templateVisible) {
+      canvas.drawPath(template, gray);
+    }
+
+    final complete = scene.previous.length == scene.template.length;
+    canvas.drawPath(previous, complete ? ok : black);
     canvas.drawPath(current, black);
   }
 

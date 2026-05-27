@@ -115,18 +115,13 @@ class Scene {
     final index = previous.length;
     final template = this.template[index];
     final current = resample(this.current, template.length);
-    final directionWeight = 0.5;
 
-    final distance = PolylineDTW.compare(
-      template,
-      current,
-      directionWeight: directionWeight,
-    );
-
-    if (distance < 0.045) {
-      onMatch(current, template);
+    final distance = PolylineDTW.compare(template, current);
+    if (distance < 0.06) {
+      onMatch(current, template); // Trigger animation of current stroke.
       return copyWith(current: []);
     } else {
+      // Reset; start over.
       return copyWith(previous: [], current: []);
     }
   }
