@@ -13,11 +13,11 @@ const double canvasDimension = 150.0;
 class Home extends StatelessWidget {
   final literals = signal<List<String>>([]);
   final command = signal<SceneCommand>(NullCommand());
-
+  late final behavior = Behavior(command);
   late final scene = loop<Scene, SceneCommand>(
     command,
     (acc, command) => acc.reduce(command),
-    Scene(behavior: IndividualStrokes(command)),
+    Scene(behavior: StokeByStroke(command)),
   );
 
   Home({super.key}) {

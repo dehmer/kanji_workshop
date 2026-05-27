@@ -6,15 +6,19 @@ import 'package:kanji_workshop/scene/command.dart';
 import 'package:kanji_workshop/scene/scene.dart';
 import 'package:kanji_workshop/scene/animate.dart';
 
-abstract class Behavior {
+class Behavior {
   final FlutterSignal<SceneCommand> command;
-  Scene onStroke(Scene scene) => scene;
-  Scene onLastStroke(Scene scene) => scene;
+  Scene dragStart(DragStart command, Scene scene) =>
+      scene.copyWith(current: [...scene.current, command.position]);
+
+  Scene dragEnd(DragEnd command, Scene scene) =>
+      scene.copyWith(previous: [...scene.previous, scene.current], current: []);
+
   Behavior(this.command);
 }
 
-class IndividualStrokes extends Behavior {
-  IndividualStrokes(super.command);
+class StokeByStroke extends Behavior {
+  StokeByStroke(super.command);
 
   void _animateStroke(Polyline current, Polyline stroke) {
     void callback(t) {
@@ -27,7 +31,7 @@ class IndividualStrokes extends Behavior {
     animate(callback: callback, end: end);
   }
 
-  Scene onStroke(Scene scene) {
+  Scene dragEnd(DragEnd _, Scene scene) {
     final index = scene.previous.length;
     final stroke = scene.template[index];
     final current = resample(scene.current, stroke.length);

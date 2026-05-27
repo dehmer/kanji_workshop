@@ -43,9 +43,9 @@ class Scene {
 
   Scene reduce(SceneCommand command) => switch (command) {
     Initialize() => initialize(command),
-    DragStart() => dragStart(command),
+    DragStart() => behavior.dragStart(command, this),
     DragUpdate() => dragUpdate(command),
-    DragEnd() => dragEnd(command),
+    DragEnd() => behavior.dragEnd(command, this),
     Reset() => copyWith(previous: [], current: []),
     AnimationFrame(frame: final f) => copyWith(frame: f),
     AnimationEnd() => animationEnd(command),
@@ -62,17 +62,8 @@ class Scene {
     );
   }
 
-  Scene dragStart(DragStart command) {
-    return copyWith(current: [...current, command.position]);
-  }
-
   Scene dragUpdate(DragUpdate command) {
     return copyWith(current: [...current, command.position]);
-  }
-
-  Scene dragEnd(DragEnd _) {
-    final complete = this.previous.length == this.template;
-    return complete ? behavior.onLastStroke(this) : behavior.onStroke(this);
   }
 
   Scene animationEnd(AnimationEnd command) {
