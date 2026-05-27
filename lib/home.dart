@@ -1,29 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:kanji_workshop/signal_extensions.dart';
 import 'package:kanji_workshop/scene_painter.dart';
 import 'package:kanji_workshop/database.dart';
-import 'package:kanji_workshop/polyline.dart';
-import 'package:kanji_workshop/scene.dart';
+import 'package:kanji_workshop/scene/scene.dart';
+import 'package:kanji_workshop/scene/command.dart';
+import 'package:kanji_workshop/scene/behavior.dart';
 
 const kankenLevel = 2;
 const double canvasDimension = 150.0;
-
-typedef LerpCallback = void Function(double t);
-typedef VoidFunction = void Function();
-
-void animate({required LerpCallback callback, required VoidFunction end}) {
-  var t = 0.0;
-  Timer.periodic(Duration(milliseconds: 16), (timer) {
-    if (t < 1.0)
-      callback((t += 0.2).clamp(0.0, 1.0));
-    else {
-      timer.cancel();
-      end();
-    }
-  });
-}
 
 class Home extends StatelessWidget {
   final literals = signal<List<String>>([]);
@@ -32,22 +17,11 @@ class Home extends StatelessWidget {
   late final scene = loop<Scene, SceneCommand>(
     command,
     (acc, command) => acc.reduce(command),
-    Scene(onMatch: onMatch),
+    Scene(behavior: IndividualStrokes(command)),
   );
 
   Home({super.key}) {
     onNext();
-  }
-
-  void onMatch(Polyline current, Polyline stroke) {
-    void callback(t) {
-      Offset lerp(i) => Offset.lerp(current[i], stroke[i], t)!;
-      final frame = List.generate(stroke.length, lerp);
-      command.value = AnimationFrame(frame);
-    }
-
-    void end() => command.value = AnimationEnd(stroke);
-    animate(callback: callback, end: end);
   }
 
   // Forward drag events to scene.

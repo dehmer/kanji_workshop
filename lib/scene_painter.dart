@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:kanji_workshop/scene.dart';
+import 'package:kanji_workshop/scene/scene.dart';
 import 'package:kanji_workshop/polyline.dart';
 
 const strokeWidth = 6.0;
