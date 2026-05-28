@@ -17,8 +17,8 @@ class Behavior {
   Behavior(this.command);
 }
 
-class StokeByStroke extends Behavior {
-  StokeByStroke(super.command);
+class StrokeByStroke extends Behavior {
+  StrokeByStroke(super.command);
 
   void _animateStroke(Polyline current, Polyline stroke) {
     void callback(t) {

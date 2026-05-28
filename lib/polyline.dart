@@ -1,15 +1,24 @@
-import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math_64.dart' show Matrix4, Vector4;
+import 'package:flutter/material.dart' show Offset;
 import 'package:kanji_workshop/extensions/offset_vector_ext.dart';
 
 typedef Polyline = List<Offset>;
 typedef PolylineList = List<List<Offset>>;
 
-Polyline Function(Polyline) scalePolyline(double s) {
-  return (line) => line.map((offset) => offset * s).toList();
-}
+Vector4 toVector4(Offset v) => Vector4(v.dx, v.dy, 0.0, 1.0);
+Offset toOffset(Vector4 v) => Offset(v[0], v[1]);
 
-PolylineList scalePolylineList(double s, PolylineList list) {
-  return list.map(scalePolyline(s)).toList();
+/// transform :: (Matrix4, Offset) -> Offset
+/// transform :: (Matrix4, List<Offset>) -> List<Offset>
+/// transform :: (Matrix4, List<List<Offset>>) -> List<List<Offset>>
+T transform<T>(Matrix4 m, T v) {
+  return switch (v) {
+        Offset() => toOffset(m.transform(toVector4(v))),
+        List<Offset>() => v.map((v) => transform(m, v)).toList(),
+        List<List<Offset>>() => v.map((v) => transform(m, v)).toList(),
+        _ => v,
+      }
+      as T;
 }
 
 Polyline tangents(Polyline points) {
@@ -32,11 +41,11 @@ Polyline tangents(Polyline points) {
   return tangents;
 }
 
-double polylineLength(Polyline points) {
+double polylineLength(Polyline xs) {
   double sum = 0.0;
 
-  for (int i = 1; i < points.length; i++) {
-    sum += (points[i] - points[i - 1]).distance;
+  for (int i = 1; i < xs.length; i++) {
+    sum += (xs[i] - xs[i - 1]).distance;
   }
 
   return sum;

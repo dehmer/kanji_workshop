@@ -7,7 +7,7 @@ import 'package:kanji_workshop/scene/scene.dart';
 import 'package:kanji_workshop/scene/command.dart';
 import 'package:kanji_workshop/scene/behavior.dart';
 
-const kankenLevel = 2;
+const kankenLevel = 3;
 const double canvasDimension = 150.0;
 
 class Home extends StatelessWidget {
@@ -17,7 +17,7 @@ class Home extends StatelessWidget {
   late final scene = loop<Scene, SceneCommand>(
     command,
     (acc, command) => acc.reduce(command),
-    Scene(behavior: StokeByStroke(command)),
+    Scene(behavior: StrokeByStroke(command)),
   );
 
   Home({super.key}) {

@@ -73,9 +73,11 @@ Path offsetsPath(PolylineList pointList) {
 }
 
 Path Function(PolylineList) createScaledPath(double s) {
+  final m = Matrix4.identity()..scaleByDouble(s, s, 0, 0);
+
   return (list) {
     final path = Path();
-    final scaled = scalePolylineList(s, list);
+    final scaled = transform(m, list);
     for (int i = 0; i < scaled.length; i++) {
       path.addPolygon(scaled[i], false);
     }
