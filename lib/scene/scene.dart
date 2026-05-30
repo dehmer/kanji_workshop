@@ -7,6 +7,7 @@ import 'package:kanji_workshop/scene/behavior.dart';
 class Scene {
   final Behavior behavior;
   final bool templateVisible;
+  final bool gridVisible;
   final PolylineList template;
   final PolylineList previous;
   final Polyline current;
@@ -15,12 +16,14 @@ class Scene {
   const Scene({
     required this.behavior,
     bool? templateVisible,
+    bool? gridVisible,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
     Polyline? frame,
     int? misses,
   }) : templateVisible = templateVisible ?? true,
+       gridVisible = gridVisible ?? true,
        template = template ?? const [],
        previous = previous ?? const [],
        current = current ?? const [],
@@ -28,6 +31,7 @@ class Scene {
 
   Scene copyWith({
     bool? templateVisible,
+    bool? gridVisible,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
@@ -35,6 +39,7 @@ class Scene {
   }) => Scene(
     behavior: this.behavior,
     templateVisible: templateVisible ?? this.templateVisible,
+    gridVisible: gridVisible ?? this.gridVisible,
     template: template ?? this.template,
     previous: previous ?? this.previous,
     current: current ?? this.current,
@@ -49,7 +54,8 @@ class Scene {
     Reset() => copyWith(previous: [], current: []),
     AnimationFrame(frame: final f) => copyWith(frame: f),
     AnimationEnd() => animationEnd(command),
-    ShowTemplate(visible: final v) => copyWith(templateVisible: v),
+    ToggleTemplate() => copyWith(templateVisible: !this.templateVisible),
+    ToggleGrid() => copyWith(gridVisible: !this.gridVisible),
     NullCommand() => this,
   };
 

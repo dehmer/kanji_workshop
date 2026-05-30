@@ -101,19 +101,21 @@ class ScenePainter extends CustomPainter {
       scene.frame.isEmpty ? scene.current : scene.frame,
     ]);
 
-    drawDashedLine(
-      canvas: canvas,
-      start: Offset(dimension / 2, 0),
-      end: Offset(dimension / 2, dimension),
-      dash: gridDash,
-    );
+    if (this.scene.gridVisible) {
+      drawDashedLine(
+        canvas: canvas,
+        start: Offset(dimension / 2, 0),
+        end: Offset(dimension / 2, dimension),
+        dash: gridDash,
+      );
 
-    drawDashedLine(
-      canvas: canvas,
-      start: Offset(0, dimension / 2),
-      end: Offset(dimension, dimension / 2),
-      dash: gridDash,
-    );
+      drawDashedLine(
+        canvas: canvas,
+        start: Offset(0, dimension / 2),
+        end: Offset(dimension, dimension / 2),
+        dash: gridDash,
+      );
+    }
 
     if (scene.templateVisible) {
       canvas.drawPath(template, gray);

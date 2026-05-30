@@ -37,7 +37,10 @@ class AnimationEnd extends SceneCommand {
   AnimationEnd(this.current);
 }
 
-class ShowTemplate extends SceneCommand {
-  final bool visible;
-  ShowTemplate(this.visible);
+class ToggleTemplate extends SceneCommand {
+  ToggleTemplate();
+}
+
+class ToggleGrid extends SceneCommand {
+  ToggleGrid();
 }

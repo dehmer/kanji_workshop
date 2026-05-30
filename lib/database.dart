@@ -8,6 +8,13 @@ import 'package:kanji_workshop/polyline.dart' show PolylineList;
 
 const databaseName = "jisho.db";
 
+typedef KanjiInfoData = ({
+  String literal,
+  String meaning,
+  String reading,
+  String strokes,
+});
+
 Future<Database> _init() async {
   var databasePath = await getDatabasesPath();
   var targetPath = join(databasePath, databaseName);
@@ -78,5 +85,29 @@ class DatabaseService {
     final database = await instance.database;
     final rows = await database.rawQuery(query);
     return rows.map(parseRow((n) => n / dimension)).toList();
+  }
+
+  Future<KanjiInfoData> info(String literal) async {
+    final query = "SELECT * FROM kanji WHERE literal = '$literal'";
+
+    final database = await instance.database;
+    final rows = await database.rawQuery(query);
+    final row = rows.first;
+
+    // TODO: remove trailing line feed (0x0a) from database.
+    String meaning(Map<String, Object?> row) => row['meaning']
+        .toString()
+        .substring(0, row['meaning'].toString().length - 1)
+        .toUpperCase();
+
+    String strokes(Map<String, Object?> row) =>
+        '${row['strokes'].toString()} ${row['radical'].toString()} (${row['radical_no'].toString()})';
+
+    return (
+      literal: row['literal'].toString(),
+      meaning: '▶︎ ${meaning(row)}',
+      reading: row['yomi'].toString(),
+      strokes: strokes(row),
+    );
   }
 }
