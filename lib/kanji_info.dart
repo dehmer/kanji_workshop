@@ -1,44 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:tategaki/tategaki.dart';
 import 'package:kanji_workshop/database.dart';
+
+String formatReading(String reading) {
+  return reading
+      .split('、')
+      .where((s) => !s.contains('-'))
+      .map((s) => s.contains('.') ? s.replaceAll('.', '(') + ')' : s)
+      .toList()
+      .join('\n');
+}
 
 class KanjiInfo extends StatelessWidget {
   final KanjiInfoData data;
   KanjiInfo({required this.data});
 
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 20.0,
       children: [
-        Text(data.literal, style: TextStyle(fontSize: 80)),
-        Column(
-          children: [
-            LimitedBox(
-              maxWidth: 400,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 4.0,
-                children: [
-                  SizedBox(height: 16),
-                  Text(
-                    data.meaning,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  Text(
-                    data.reading,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  Text(
-                    data.strokes,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 0, 0),
+          child: Text(
+            data.meaning,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(10, 0, 0, 0),
+          child: Text(data.literal, style: TextStyle(fontSize: 80)),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 0, 0),
+          child: Text(data.strokes, style: TextStyle(fontSize: 16)),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(24, 16, 0, 0),
+          child: VerticalText(
+            formatReading(data.reading),
+            style: const VerticalTextStyle(
+              baseStyle: TextStyle(fontSize: 20, color: Colors.black87),
+              characterSpacing: 4,
+              lineSpacing: 10,
             ),
-          ],
+            maxHeight: 150, // Wrap to next line after 400px height
+          ),
         ),
       ],
     );

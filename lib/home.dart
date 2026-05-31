@@ -5,7 +5,7 @@ import 'package:signals/signals_flutter.dart';
 import 'package:kanji_workshop/polyline.dart';
 import 'package:kanji_workshop/database.dart';
 
-const kankenLevel = 3;
+const kankenLevel = 1;
 const offWhite = const Color(0xFFfefdfa);
 
 Widget sizedBox({
