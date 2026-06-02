@@ -96,10 +96,25 @@ class ScenePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final createPath = createScaledPath(dimension);
     final template = createPath(scene.template);
-    final previous = createPath(scene.previous);
-    final current = createPath([
-      scene.frame.isEmpty ? scene.current : scene.frame,
+
+    // Drop last stroke of previous if animation is in progress:
+    final previousLength = scene.previous.length;
+    final previous = switch (scene.frame.isNotEmpty) {
+      true => createPath(scene.previous.sublist(0, previousLength - 1)),
+      false => createPath(scene.previous),
+    };
+
+    final hint = createPath([
+      switch (scene.misses) {
+        2 => scene.template[previousLength].sublist(0, 2),
+        3 => scene.template[previousLength],
+        _ => [],
+      },
     ]);
+
+    createPath(scene.previous);
+    final current = createPath([scene.current]);
+    final frame = createPath(scene.frame);
 
     if (this.scene.gridVisible) {
       drawDashedLine(
@@ -121,9 +136,16 @@ class ScenePainter extends CustomPainter {
       canvas.drawPath(template, gray);
     }
 
+    // Depending on animation frame, draw previous and/or current.
     final complete = scene.previous.length == scene.template.length;
-    canvas.drawPath(previous, complete ? ok : black);
-    canvas.drawPath(current, black);
+    if (scene.frame.isEmpty) canvas.drawPath(current, black);
+    final drawPrevious = scene.frame.isEmpty || scene.frame.length == 1;
+    final drawCurrent = scene.frame.isEmpty;
+
+    if (drawPrevious) canvas.drawPath(previous, complete ? ok : black);
+    if (drawCurrent) canvas.drawPath(current, black);
+    canvas.drawPath(frame, black);
+    canvas.drawPath(hint, red);
   }
 
   @override

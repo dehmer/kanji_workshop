@@ -5,7 +5,7 @@ import 'package:signals/signals_flutter.dart';
 import 'package:kanji_workshop/polyline.dart';
 import 'package:kanji_workshop/database.dart';
 
-const kankenLevel = 1;
+const kankenLevel = 2;
 const offWhite = const Color(0xFFfefdfa);
 
 Widget sizedBox({
@@ -88,7 +88,11 @@ class Home extends StatelessWidget {
               sizedBox(
                 width: width,
                 height: height,
-                child: KanjiInfo(data: kanjiInfo.watch(context)),
+                child: SignalBuilder(
+                  builder: (context) {
+                    return KanjiInfo(data: kanjiInfo.value);
+                  },
+                ),
               ),
               sizedBox(
                 width: width,
@@ -96,9 +100,13 @@ class Home extends StatelessWidget {
                 child: Column(
                   children: [
                     SizedBox(height: 120),
-                    KanjiDraw(
-                      template: template.watch(context),
-                      onNext: onNext,
+                    SignalBuilder(
+                      builder: (context) {
+                        return KanjiDraw(
+                          template: template.value,
+                          onNext: onNext,
+                        );
+                      },
                     ),
                   ],
                 ),

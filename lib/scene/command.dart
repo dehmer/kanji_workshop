@@ -28,7 +28,7 @@ class DragEnd extends SceneCommand {
 }
 
 class AnimationFrame extends SceneCommand {
-  final Polyline frame;
+  final PolylineList frame;
   AnimationFrame(this.frame);
 }
 

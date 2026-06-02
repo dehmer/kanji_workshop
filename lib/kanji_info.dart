@@ -40,11 +40,11 @@ class KanjiInfo extends StatelessWidget {
           child: VerticalText(
             formatReading(data.reading),
             style: const VerticalTextStyle(
-              baseStyle: TextStyle(fontSize: 20, color: Colors.black87),
+              baseStyle: TextStyle(fontSize: 20),
               characterSpacing: 4,
               lineSpacing: 10,
             ),
-            maxHeight: 150, // Wrap to next line after 400px height
+            maxHeight: 150,
           ),
         ),
       ],

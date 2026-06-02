@@ -11,8 +11,11 @@ class Behavior {
   Scene dragStart(DragStart command, Scene scene) =>
       scene.copyWith(current: [...scene.current, command.position]);
 
-  Scene dragEnd(DragEnd command, Scene scene) =>
-      scene.copyWith(previous: [...scene.previous, scene.current], current: []);
+  Scene dragEnd(DragEnd command, Scene scene) => scene.copyWith(
+    previous: [...scene.previous, scene.current],
+    current: [],
+    misses: 0,
+  );
 
   Behavior(this.command);
 }
@@ -24,12 +27,18 @@ class StrokeByStroke extends Behavior {
     void callback(t) {
       Offset lerp(i) => Offset.lerp(current[i], stroke[i], t)!;
       final frame = List.generate(stroke.length, lerp);
-      command.value = AnimationFrame(frame);
+      command.value = AnimationFrame([frame]);
     }
 
     void end() => command.value = AnimationEnd(stroke);
     animate(callback: callback, end: end);
   }
+
+  @override
+  Scene dragStart(DragStart command, Scene scene) => scene.copyWith(
+    templateVisible: false,
+    current: [...scene.current, command.position],
+  );
 
   Scene dragEnd(DragEnd _, Scene scene) {
     final index = scene.previous.length;
@@ -39,10 +48,19 @@ class StrokeByStroke extends Behavior {
     final distance = PolylineDTW.compare(stroke, current);
     if (distance < 0.06) {
       _animateStroke(current, stroke);
-      return scene.copyWith(current: []);
+      return scene.copyWith(
+        previous: [...scene.previous, scene.template[index]],
+        current: [],
+        frame: [scene.current],
+        misses: 0,
+      );
     } else {
       // Reset; start over.
-      return scene.copyWith(previous: [], current: []);
+      return scene.copyWith(
+        // previous: [],
+        current: [],
+        misses: scene.misses + 1,
+      );
     }
   }
 }

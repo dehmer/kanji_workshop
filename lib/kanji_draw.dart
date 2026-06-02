@@ -55,9 +55,13 @@ class KanjiDraw extends StatelessWidget {
                 border: Border.all(color: Colors.black12, width: 2.0),
               ),
               child: RepaintBoundary(
-                child: CustomPaint(
-                  painter: ScenePainter(scene.watch(context), canvasDimension),
-                  size: Size.infinite,
+                child: SignalBuilder(
+                  builder: (context) {
+                    return CustomPaint(
+                      painter: ScenePainter(scene.value, canvasDimension),
+                      size: Size.infinite,
+                    );
+                  },
                 ),
               ),
             ),
@@ -75,7 +79,6 @@ class KanjiDraw extends StatelessWidget {
                     size: buttonSize,
                   ),
                 ),
-                // SizedBox(width: 10),
                 CupertinoButton(
                   onPressed: onNext,
                   child: Icon(
@@ -84,26 +87,32 @@ class KanjiDraw extends StatelessWidget {
                     size: buttonSize,
                   ),
                 ),
-                // SizedBox(width: 10),
                 CupertinoButton(
                   onPressed: () => command.value = ToggleTemplate(),
-                  child: Icon(
-                    templateVisible.watch(context)
-                        ? CupertinoIcons.eye
-                        : CupertinoIcons.eye_slash,
-                    color: Colors.pink,
-                    size: buttonSize,
+                  child: SignalBuilder(
+                    builder: (context) {
+                      return Icon(
+                        templateVisible.value
+                            ? CupertinoIcons.eye
+                            : CupertinoIcons.eye_slash,
+                        color: Colors.pink,
+                        size: buttonSize,
+                      );
+                    },
                   ),
                 ),
-                // SizedBox(width: 10),
                 CupertinoButton(
                   onPressed: () => command.value = ToggleGrid(),
-                  child: Icon(
-                    gridVisible.watch(context)
-                        ? CupertinoIcons.square_grid_2x2_fill
-                        : CupertinoIcons.square_grid_2x2,
-                    color: Colors.pink,
-                    size: buttonSize,
+                  child: SignalBuilder(
+                    builder: (context) {
+                      return Icon(
+                        gridVisible.value
+                            ? CupertinoIcons.square_grid_2x2_fill
+                            : CupertinoIcons.square_grid_2x2,
+                        color: Colors.pink,
+                        size: buttonSize,
+                      );
+                    },
                   ),
                 ),
               ],

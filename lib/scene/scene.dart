@@ -11,23 +11,27 @@ class Scene {
   final PolylineList template;
   final PolylineList previous;
   final Polyline current;
-  final Polyline frame;
 
-  const Scene({
+  /// Animation frame for one or multiple strokes.
+  final PolylineList frame;
+  final int misses;
+
+  Scene({
     required this.behavior,
     bool? templateVisible,
     bool? gridVisible,
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
-    Polyline? frame,
+    PolylineList? frame,
     int? misses,
   }) : templateVisible = templateVisible ?? true,
        gridVisible = gridVisible ?? true,
        template = template ?? const [],
        previous = previous ?? const [],
        current = current ?? const [],
-       frame = frame ?? const [];
+       frame = frame ?? const [],
+       misses = misses ?? 0;
 
   Scene copyWith({
     bool? templateVisible,
@@ -35,7 +39,8 @@ class Scene {
     PolylineList? template,
     PolylineList? previous,
     Polyline? current,
-    Polyline? frame,
+    PolylineList? frame,
+    int? misses,
   }) => Scene(
     behavior: this.behavior,
     templateVisible: templateVisible ?? this.templateVisible,
@@ -44,20 +49,36 @@ class Scene {
     previous: previous ?? this.previous,
     current: current ?? this.current,
     frame: frame ?? this.frame,
+    misses: misses ?? this.misses,
   );
 
   Scene reduce(SceneCommand command) => switch (command) {
     Initialize() => initialize(command),
-    DragStart() => behavior.dragStart(command, this),
+    DragStart() => dragStart(command),
     DragUpdate() => dragUpdate(command),
-    DragEnd() => behavior.dragEnd(command, this),
-    Reset() => copyWith(previous: [], current: []),
+    DragEnd() => dragEnd(command),
+    Reset() => copyWith(previous: [], current: [], misses: 0),
     AnimationFrame(frame: final f) => copyWith(frame: f),
     AnimationEnd() => animationEnd(command),
     ToggleTemplate() => copyWith(templateVisible: !this.templateVisible),
     ToggleGrid() => copyWith(gridVisible: !this.gridVisible),
     NullCommand() => this,
   };
+
+  Scene dragStart(DragStart command) {
+    if (previous.length == template.length) return this;
+    return behavior.dragStart(command, this);
+  }
+
+  Scene dragUpdate(DragUpdate command) {
+    if (previous.length == template.length) return this;
+    return copyWith(current: [...current, command.position]);
+  }
+
+  Scene dragEnd(DragEnd command) {
+    if (previous.length == template.length) return this;
+    return behavior.dragEnd(command, this);
+  }
 
   Scene initialize(Initialize command) {
     return copyWith(
@@ -68,11 +89,7 @@ class Scene {
     );
   }
 
-  Scene dragUpdate(DragUpdate command) {
-    return copyWith(current: [...current, command.position]);
-  }
-
   Scene animationEnd(AnimationEnd command) {
-    return copyWith(previous: [...previous, command.current], frame: []);
+    return copyWith(frame: []);
   }
 }

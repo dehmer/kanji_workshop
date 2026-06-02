@@ -20,6 +20,7 @@ dependencies:
   webview_flutter: ^4.13.1
   tategaki: ^0.6.4
   yokogaki: ^0.10.2
+  carousel_slider: ^5.1.2
 
 dev_dependencies:
   flutter_test:
