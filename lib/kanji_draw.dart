@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:signals/signals_flutter.dart';
-import 'package:kanji_workshop/signal_extensions.dart';
-import 'package:kanji_workshop/polyline.dart';
-import 'package:kanji_workshop/scene_painter.dart';
-import 'package:kanji_workshop/scene/scene.dart';
-import 'package:kanji_workshop/scene/command.dart';
-import 'package:kanji_workshop/scene/behavior.dart';
+import 'extensions/signal_extensions.dart';
+import 'polyline.dart';
+import 'scene_painter.dart';
+import 'scene/scene.dart';
+import 'scene/command.dart';
+import 'scene/behavior.dart';
 
 const double canvasDimension = 150.0;
 const double buttonSize = 30.0;
@@ -26,7 +26,7 @@ class KanjiDraw extends StatelessWidget {
   late final templateVisible = scene.map((scene) => scene.templateVisible);
   late final gridVisible = scene.map((scene) => scene.gridVisible);
 
-  KanjiDraw({required this.template, required this.onNext});
+  KanjiDraw({super.key, required this.template, required this.onNext});
 
   // Forward drag events to scene.
 
@@ -39,6 +39,7 @@ class KanjiDraw extends StatelessWidget {
   void onPanEnd(DragEndDetails details) =>
       command.value = DragEnd(details.localPosition / canvasDimension);
 
+  @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(

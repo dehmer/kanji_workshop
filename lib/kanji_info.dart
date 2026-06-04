@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:tategaki/tategaki.dart';
-import 'package:kanji_workshop/database.dart';
+import 'database.dart';
 
 String formatReading(String reading) {
   return reading
       .split('、')
       .where((s) => !s.contains('-'))
-      .map((s) => s.contains('.') ? s.replaceAll('.', '(') + ')' : s)
+      .map((s) => s.contains('.') ? '${s.replaceAll('.', '(')})' : s)
       .toList()
       .join('\n');
 }
 
 class KanjiInfo extends StatelessWidget {
-  final KanjiInfoData data;
-  KanjiInfo({required this.data});
+  final KanjiData data;
+  const KanjiInfo({super.key, required this.data});
 
+  @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

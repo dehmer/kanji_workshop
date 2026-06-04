@@ -1,5 +1,5 @@
 import 'package:signals/signals_flutter.dart';
-import 'option.dart';
+import '../option.dart';
 
 ({FlutterSignal<Option<T>> signal, void Function(T) callback}) listen<T>() {
   final signal = FlutterSignal<Option<T>>(None());
@@ -32,9 +32,4 @@ FlutterSignal<T> loop<T, I>(
 extension SignalOps<V> on ReadonlySignal<V> {
   FlutterComputed<R> map<R>(R Function(V value) fn) =>
       computed(() => fn(value));
-
-  FlutterSignal<V> filter(bool Function(V value)) {
-    FlutterSignal<V> self = FlutterSignal<V>.lazy();
-    return self;
-  }
 }

@@ -7,8 +7,8 @@ extension to Offset. Resampling of inputs is allowed.
 
 import 'dart:math' as math;
 import 'dart:ui';
-import 'package:kanji_workshop/extensions/offset_vector_ext.dart';
-import 'package:kanji_workshop/polyline.dart';
+import 'extensions/offset_vector_ext.dart';
+import 'polyline.dart';
 
 /// ============================================================
 /// Polyline DTW comparer

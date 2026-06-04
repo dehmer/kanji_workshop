@@ -1,6 +1,3 @@
-import 'dart:ui' show Offset;
-import 'package:kanji_workshop/polyline.dart' show Polyline;
-
 /// Uniform SVG height and width.
 const dimension = 109.0;
 
@@ -23,14 +20,4 @@ List<List<T>> splitEvery<T>(int n, List<T> list) {
   }
 
   return acc;
-}
-
-/// parseRow :: (double -> double) -> {k: v} -> [Offset]
-/// Parse a single row from database query containing SVG 'path' column.
-Polyline Function(Map<String, Object?>) parseRow(double transform(double)) {
-  return (row) {
-    Offset offset(tuple) => Offset(tuple[0], tuple[1]);
-    final path = splitPath(row['path']!.toString()).map(transform).toList();
-    return splitEvery(2, path).map(offset).toList();
-  };
 }

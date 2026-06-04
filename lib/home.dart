@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:kanji_workshop/kanji_draw.dart';
-import 'package:kanji_workshop/kanji_info.dart';
 import 'package:signals/signals_flutter.dart';
-import 'package:kanji_workshop/polyline.dart';
-import 'package:kanji_workshop/database.dart';
+import 'kanji_draw.dart';
+import 'kanji_info.dart';
+import 'polyline.dart';
+import 'database.dart';
 
 const kankenLevel = 2;
-const offWhite = const Color(0xFFfefdfa);
+const offWhite = Color(0xFFfefdfa);
 
 Widget sizedBox({
   required double width,
@@ -16,7 +16,6 @@ Widget sizedBox({
   width: width,
   height: height,
   child: DecoratedBox(
-    child: child,
     decoration: BoxDecoration(
       color: offWhite,
       boxShadow: [
@@ -27,38 +26,39 @@ Widget sizedBox({
         ),
       ],
     ),
+    child: child,
   ),
 );
 
 class Home extends StatelessWidget {
   final literals = signal<List<String>>([]);
   final template = signal<PolylineList>(([]));
-  final kanjiInfo = signal<KanjiInfoData>((
+  final kanji = signal<KanjiData>((
     literal: '',
     meaning: '',
     reading: '',
     strokes: '',
   ));
 
+  final composite = signal<List<CompositeData>>([]);
+
   Home({super.key}) {
     onNext();
   }
 
   void onNext() async {
-    if (this.literals.value.isEmpty) {
+    if (literals.value.isEmpty) {
       final literals = await DatabaseService.instance.randomKankenLiterals(
         kankenLevel,
       );
       this.literals.value = literals;
     }
 
-    final [head, ...tail] = this.literals.value;
-    this.literals.value = tail;
-    final strokes = await DatabaseService.instance.strokes(head);
-    template.value = strokes;
-
-    final info = await DatabaseService.instance.info(head);
-    kanjiInfo.value = info;
+    final [head, ...tail] = literals.value;
+    literals.value = tail;
+    template.value = await DatabaseService.instance.strokes(head);
+    kanji.value = await DatabaseService.instance.info(head);
+    composite.value = await DatabaseService.instance.composite(head);
   }
 
   @override
@@ -80,39 +80,37 @@ class Home extends StatelessWidget {
       backgroundColor: offWhite,
       appBar: AppBar(backgroundColor: offWhite, title: Text('Kanji Workshop')),
       body: Center(
-        child: Container(
-          child: Flex(
-            direction: direction,
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              sizedBox(
-                width: width,
-                height: height,
-                child: SignalBuilder(
-                  builder: (context) {
-                    return KanjiInfo(data: kanjiInfo.value);
-                  },
-                ),
+        child: Flex(
+          direction: direction,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            sizedBox(
+              width: width,
+              height: height,
+              child: SignalBuilder(
+                builder: (context) {
+                  return KanjiInfo(data: kanji.value);
+                },
               ),
-              sizedBox(
-                width: width,
-                height: height,
-                child: Column(
-                  children: [
-                    SizedBox(height: 120),
-                    SignalBuilder(
-                      builder: (context) {
-                        return KanjiDraw(
-                          template: template.value,
-                          onNext: onNext,
-                        );
-                      },
-                    ),
-                  ],
-                ),
+            ),
+            sizedBox(
+              width: width,
+              height: height,
+              child: Column(
+                children: [
+                  SizedBox(height: 120),
+                  SignalBuilder(
+                    builder: (context) {
+                      return KanjiDraw(
+                        template: template.value,
+                        onNext: onNext,
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

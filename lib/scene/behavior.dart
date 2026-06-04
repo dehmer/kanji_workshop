@@ -1,10 +1,10 @@
 import 'dart:ui' show Offset;
 import 'package:signals/signals_flutter.dart';
-import 'package:kanji_workshop/polyline.dart';
-import 'package:kanji_workshop/dtw.dart';
-import 'package:kanji_workshop/scene/command.dart';
-import 'package:kanji_workshop/scene/scene.dart';
-import 'package:kanji_workshop/scene/animate.dart';
+import '../polyline.dart';
+import '../dtw.dart';
+import '../scene/command.dart';
+import '../scene/scene.dart';
+import '../scene/animate.dart';
 
 class Behavior {
   final FlutterSignal<SceneCommand> command;
@@ -40,6 +40,7 @@ class StrokeByStroke extends Behavior {
     current: [...scene.current, command.position],
   );
 
+  @override
   Scene dragEnd(DragEnd _, Scene scene) {
     final index = scene.previous.length;
     final stroke = scene.template[index];

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:kanji_workshop/scene/scene.dart';
-import 'package:kanji_workshop/polyline.dart';
+import 'scene/scene.dart';
+import 'polyline.dart';
 
 const strokeWidth = 6.0;
 final black = Paint()
@@ -116,7 +116,7 @@ class ScenePainter extends CustomPainter {
     final current = createPath([scene.current]);
     final frame = createPath(scene.frame);
 
-    if (this.scene.gridVisible) {
+    if (scene.gridVisible) {
       drawDashedLine(
         canvas: canvas,
         start: Offset(dimension / 2, 0),

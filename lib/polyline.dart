@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Vector4;
 import 'package:flutter/material.dart' show Offset;
-import 'package:kanji_workshop/extensions/offset_vector_ext.dart';
+import 'extensions/offset_vector_ext.dart';
 
 typedef Polyline = List<Offset>;
 typedef PolylineList = List<List<Offset>>;
@@ -9,8 +9,8 @@ Vector4 toVector4(Offset v) => Vector4(v.dx, v.dy, 0.0, 1.0);
 Offset toOffset(Vector4 v) => Offset(v[0], v[1]);
 
 /// transform :: (Matrix4, Offset) -> Offset
-/// transform :: (Matrix4, List<Offset>) -> List<Offset>
-/// transform :: (Matrix4, List<List<Offset>>) -> List<List<Offset>>
+/// transform :: (Matrix4, [Offset]) -> [Offset]
+/// transform :: (Matrix4, [[Offset]]) -> [[Offset]]
 T transform<T>(Matrix4 m, T v) {
   return switch (v) {
         Offset() => toOffset(m.transform(toVector4(v))),

@@ -1,5 +1,5 @@
 import 'dart:ui';
-import 'package:kanji_workshop/polyline.dart';
+import '../polyline.dart';
 
 sealed class SceneCommand {}
 

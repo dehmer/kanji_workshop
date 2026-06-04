@@ -1,18 +1,25 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:kanji_workshop/kanji_vg.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/services.dart';
-import 'package:kanji_workshop/polyline.dart' show PolylineList;
+import 'kanji_vg.dart';
+import 'polyline.dart' show Polyline, PolylineList;
 
 const databaseName = "jisho.db";
 
-typedef KanjiInfoData = ({
+typedef KanjiData = ({
   String literal,
   String meaning,
   String reading,
   String strokes,
+});
+
+typedef CompositeData = ({
+  String literal,
+  String kanji,
+  String reading,
+  String meaning,
 });
 
 Future<Database> _init() async {
@@ -79,26 +86,34 @@ class DatabaseService {
   }
 
   Future<PolylineList> strokes(String literal) async {
+    /// parseRow :: (double -> double) -> {k: v} -> [Offset]
+    /// Parse a single row from database query containing SVG 'path' column.
+    Polyline Function(Map<String, Object?>) parse(
+      double Function(double) transform,
+    ) {
+      return (row) {
+        Offset offset(tuple) => Offset(tuple[0], tuple[1]);
+        final path = splitPath(row['path']!.toString()).map(transform).toList();
+        return splitEvery(2, path).map(offset).toList();
+      };
+    }
+
     final query =
         "SELECT path FROM stroke WHERE literal = '$literal' ORDER BY idx";
 
     final database = await instance.database;
     final rows = await database.rawQuery(query);
-    return rows.map(parseRow((n) => n / dimension)).toList();
+    return rows.map(parse((n) => n / dimension)).toList();
   }
 
-  Future<KanjiInfoData> info(String literal) async {
+  Future<KanjiData> info(String literal) async {
     final query = "SELECT * FROM kanji WHERE literal = '$literal'";
-
     final database = await instance.database;
     final rows = await database.rawQuery(query);
     final row = rows.first;
 
-    // TODO: remove trailing line feed (0x0a) from database.
-    String meaning(Map<String, Object?> row) => row['meaning']
-        .toString()
-        .substring(0, row['meaning'].toString().length - 1)
-        .toUpperCase();
+    String meaning(Map<String, Object?> row) =>
+        row['meaning'].toString().toUpperCase();
 
     String strokes(Map<String, Object?> row) =>
         '${row['strokes'].toString()} ${row['radical'].toString()} (${row['radical_no'].toString()})';
@@ -109,5 +124,22 @@ class DatabaseService {
       reading: row['yomi'].toString(),
       strokes: strokes(row),
     );
+  }
+
+  Future<List<CompositeData>> composite(String literal) async {
+    final query = "SELECT * FROM composite WHERE literal = '$literal'";
+    final database = await instance.database;
+    final rows = await database.rawQuery(query);
+
+    CompositeData parse(Map<String, Object?> row) {
+      return (
+        literal: row['literal'].toString(),
+        kanji: row['kanji_txt'].toString(),
+        reading: row['reading_txt'].toString(),
+        meaning: row['meaning_txt'].toString(),
+      );
+    }
+
+    return rows.map(parse).toList();
   }
 }

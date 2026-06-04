@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show immutable;
-import 'package:kanji_workshop/polyline.dart';
-import 'package:kanji_workshop/scene/command.dart';
-import 'package:kanji_workshop/scene/behavior.dart';
+import '../polyline.dart';
+import '../scene/command.dart';
+import '../scene/behavior.dart';
 
 @immutable
 class Scene {
@@ -16,7 +16,7 @@ class Scene {
   final PolylineList frame;
   final int misses;
 
-  Scene({
+  const Scene({
     required this.behavior,
     bool? templateVisible,
     bool? gridVisible,
@@ -42,7 +42,7 @@ class Scene {
     PolylineList? frame,
     int? misses,
   }) => Scene(
-    behavior: this.behavior,
+    behavior: behavior,
     templateVisible: templateVisible ?? this.templateVisible,
     gridVisible: gridVisible ?? this.gridVisible,
     template: template ?? this.template,
@@ -60,8 +60,8 @@ class Scene {
     Reset() => copyWith(previous: [], current: [], misses: 0),
     AnimationFrame(frame: final f) => copyWith(frame: f),
     AnimationEnd() => animationEnd(command),
-    ToggleTemplate() => copyWith(templateVisible: !this.templateVisible),
-    ToggleGrid() => copyWith(gridVisible: !this.gridVisible),
+    ToggleTemplate() => copyWith(templateVisible: !templateVisible),
+    ToggleGrid() => copyWith(gridVisible: !gridVisible),
     NullCommand() => this,
   };
 
