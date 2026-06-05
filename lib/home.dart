@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:signals/signals_flutter.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 import 'kanji_draw.dart';
-import 'kanji_info.dart';
+import 'Kanji_slider.dart';
 import 'polyline.dart';
 import 'database.dart';
 
-const kankenLevel = 2;
+const kankenLevel = 1;
 const offWhite = Color(0xFFfefdfa);
 
 Widget sizedBox({
@@ -33,14 +34,12 @@ Widget sizedBox({
 class Home extends StatelessWidget {
   final literals = signal<List<String>>([]);
   final template = signal<PolylineList>(([]));
-  final kanji = signal<KanjiData>((
-    literal: '',
-    meaning: '',
-    reading: '',
-    strokes: '',
+  final sliderData = signal<SliderData>((
+    kanji: (literal: '', meaning: '', reading: '', strokes: ''),
+    composite: <CompositeData>[],
   ));
 
-  final composite = signal<List<CompositeData>>([]);
+  final CarouselSliderController controller = CarouselSliderController();
 
   Home({super.key}) {
     onNext();
@@ -57,8 +56,9 @@ class Home extends StatelessWidget {
     final [head, ...tail] = literals.value;
     literals.value = tail;
     template.value = await DatabaseService.instance.strokes(head);
-    kanji.value = await DatabaseService.instance.info(head);
-    composite.value = await DatabaseService.instance.composite(head);
+    final kanji = await DatabaseService.instance.info(head);
+    final composite = await DatabaseService.instance.composite(head);
+    sliderData.value = (kanji: kanji, composite: composite);
   }
 
   @override
@@ -88,9 +88,7 @@ class Home extends StatelessWidget {
               width: width,
               height: height,
               child: SignalBuilder(
-                builder: (context) {
-                  return KanjiInfo(data: kanji.value);
-                },
+                builder: (context) => KanjiSlider(data: sliderData.value),
               ),
             ),
             sizedBox(
