@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:async' show Completer;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/services.dart';
@@ -22,39 +23,40 @@ typedef CompositeData = ({
   String meaning,
 });
 
-Future<Database> _init() async {
-  var databasePath = await getDatabasesPath();
-  var targetPath = join(databasePath, databaseName);
-  var exists = await databaseExists(targetPath);
+class Repository {
+  static Repository? _instance;
+  Database database;
+  static final _completer = Completer<Repository>();
+  Repository._(this.database);
 
-  if (!exists) {
-    var data = await rootBundle.load(join('assets', 'db', databaseName));
-    List<int> bytes = data.buffer.asUint8List(
-      data.offsetInBytes,
-      data.lengthInBytes,
-    );
-
-    await File(targetPath).writeAsBytes(bytes, flush: true);
+  static Future<Repository> getInstance() async {
+    if (_instance == null) {
+      final database = await _initialize();
+      _instance = Repository._(database);
+      _completer.complete(_instance);
+    }
+    return _completer.future;
   }
 
-  return await openDatabase(targetPath, version: 1);
-}
+  static Future<Database> _initialize() async {
+    var databasePath = await getDatabasesPath();
+    var targetPath = join(databasePath, databaseName);
+    var exists = await databaseExists(targetPath);
 
-class DatabaseService {
-  DatabaseService._();
-  static final DatabaseService instance = DatabaseService._();
-  factory DatabaseService() => instance;
+    if (!exists) {
+      var data = await rootBundle.load(join('assets', 'db', databaseName));
+      List<int> bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
 
-  static Database? _database;
+      await File(targetPath).writeAsBytes(bytes, flush: true);
+    }
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _init();
-    return _database!;
+    return await openDatabase(targetPath, version: 1);
   }
 
   Future<List<int>> kankenCounts() async {
-    final database = await instance.database;
     final result = await database.rawQuery(
       'SELECT count(*) AS cnt FROM kanken GROUP BY idx ORDER BY idx',
     );
@@ -63,7 +65,6 @@ class DatabaseService {
   }
 
   Future<String> randomKankenLiteral(int level) async {
-    final database = await instance.database;
     final counts = await kankenCounts();
     final random = Random();
     final offset = random.nextInt(counts[level - 1]);
@@ -74,7 +75,6 @@ class DatabaseService {
   }
 
   Future<List<String>> randomKankenLiterals(int level) async {
-    final database = await instance.database;
     final result = await database.rawQuery(
       'SELECT literal FROM kanken WHERE idx = $level',
     );
@@ -101,14 +101,12 @@ class DatabaseService {
     final query =
         "SELECT path FROM stroke WHERE literal = '$literal' ORDER BY idx";
 
-    final database = await instance.database;
     final rows = await database.rawQuery(query);
     return rows.map(parse((n) => n / dimension)).toList();
   }
 
   Future<KanjiData> info(String literal) async {
     final query = "SELECT * FROM kanji WHERE literal = '$literal'";
-    final database = await instance.database;
     final rows = await database.rawQuery(query);
     final row = rows.first;
 
@@ -128,7 +126,6 @@ class DatabaseService {
 
   Future<List<CompositeData>> composite(String literal) async {
     final query = "SELECT * FROM composite WHERE literal = '$literal'";
-    final database = await instance.database;
     final rows = await database.rawQuery(query);
 
     CompositeData parse(Map<String, Object?> row) {

@@ -4,7 +4,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'kanji_draw.dart';
 import 'Kanji_slider.dart';
 import 'polyline.dart';
-import 'database.dart';
+import 'repository.dart';
 
 const kankenLevel = 1;
 const offWhite = Color(0xFFfefdfa);
@@ -46,18 +46,18 @@ class Home extends StatelessWidget {
   }
 
   void onNext() async {
+    final repository = await Repository.getInstance();
+
     if (literals.value.isEmpty) {
-      final literals = await DatabaseService.instance.randomKankenLiterals(
-        kankenLevel,
-      );
+      final literals = await repository.randomKankenLiterals(kankenLevel);
       this.literals.value = literals;
     }
 
     final [head, ...tail] = literals.value;
     literals.value = tail;
-    template.value = await DatabaseService.instance.strokes(head);
-    final kanji = await DatabaseService.instance.info(head);
-    final composite = await DatabaseService.instance.composite(head);
+    template.value = await repository.strokes(head);
+    final kanji = await repository.info(head);
+    final composite = await repository.composite(head);
     sliderData.value = (kanji: kanji, composite: composite);
   }
 

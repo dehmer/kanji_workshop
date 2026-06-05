@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'database.dart';
+import 'repository.dart';
 import 'kanji_info.dart';
 import 'kanji_composite.dart';
 

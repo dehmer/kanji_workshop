@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tategaki/tategaki.dart';
-import 'database.dart';
+import 'repository.dart';
 
 String formatReading(String reading) {
   return reading
