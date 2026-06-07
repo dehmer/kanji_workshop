@@ -10,7 +10,17 @@ FlutterSignal<T> loop<T, I>(
   signal.subscribe((input) async {
     self.value = await fn(self.value, input);
   });
-  effect(() => self.value);
+
+  return self;
+}
+
+FlutterSignal<T> asyncMap<I, T>(
+  FlutterReadonlySignal signal,
+  FutureOr<T> Function(I) fn,
+  T initial,
+) {
+  final self = FlutterSignal<T>(initial);
+  signal.subscribe((value) async => self.value = await fn(value));
   return self;
 }
 

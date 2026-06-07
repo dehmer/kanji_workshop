@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:async' show Completer;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/services.dart';
@@ -26,16 +25,15 @@ typedef CompositeData = ({
 class Repository {
   static Repository? _instance;
   Database database;
-  static final _completer = Completer<Repository>();
   Repository._(this.database);
 
   static Future<Repository> getInstance() async {
     if (_instance == null) {
       final database = await _initialize();
       _instance = Repository._(database);
-      _completer.complete(_instance);
+      return _instance!;
     }
-    return _completer.future;
+    return _instance!;
   }
 
   static Future<Database> _initialize() async {
@@ -75,8 +73,9 @@ class Repository {
   }
 
   Future<List<String>> randomKankenLiterals(int level) async {
+    // Kanken index is 1-based in database:
     final result = await database.rawQuery(
-      'SELECT literal FROM kanken WHERE idx = $level',
+      'SELECT literal FROM kanken WHERE idx = ${level + 1}',
     );
 
     final x = result.map((row) => row['literal']).toList().cast<String>();
@@ -105,9 +104,11 @@ class Repository {
     return rows.map(parse((n) => n / dimension)).toList();
   }
 
-  Future<KanjiData> info(String literal) async {
+  Future<KanjiData?> info(String literal) async {
     final query = "SELECT * FROM kanji WHERE literal = '$literal'";
     final rows = await database.rawQuery(query);
+    if (rows.isEmpty) return null;
+
     final row = rows.first;
 
     String meaning(Map<String, Object?> row) =>

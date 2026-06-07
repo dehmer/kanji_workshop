@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:kanji_workshop/literals.dart';
 import 'package:signals/signals_flutter.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter/cupertino.dart' show CupertinoSlider;
+import 'extensions/signal_extensions.dart';
 import 'kanji_draw.dart';
-import 'Kanji_slider.dart';
+import 'kanji_carousel.dart';
 import 'polyline.dart';
 import 'repository.dart';
 
-const kankenLevel = 1;
 const offWhite = Color(0xFFfefdfa);
 
 Widget sizedBox({
@@ -31,34 +34,54 @@ Widget sizedBox({
   ),
 );
 
+Future<PolylineList> loadStrokes(String literal) async {
+  final repository = await Repository.getInstance();
+  return repository.strokes(literal);
+}
+
+Future<KanjiData?> loadInfo(String literal) async {
+  final repository = await Repository.getInstance();
+  return repository.info(literal);
+}
+
+Future<List<CompositeData>> loadComposite(String literal) async {
+  final repository = await Repository.getInstance();
+  return repository.composite(literal);
+}
+
 class Home extends StatelessWidget {
-  final literals = signal<List<String>>([]);
-  final template = signal<PolylineList>(([]));
-  final sliderData = signal<SliderData>((
-    kanji: (literal: '', meaning: '', reading: '', strokes: ''),
-    composite: <CompositeData>[],
+  final command = signal<LiteralsCommand>(NullCommand());
+  late final literals = loop<Literals, LiteralsCommand>(
+    command,
+    (acc, command) => acc.reduce(command),
+    Literals(level: '10'),
+  );
+
+  late final literal = literals.map((pool) => pool.current);
+
+  late final template = asyncMap<String, PolylineList>(
+    literal,
+    loadStrokes,
+    [],
+  );
+
+  late final kanjiInfo = asyncMap(literal, loadInfo, (
+    literal: '',
+    meaning: '',
+    reading: '',
+    strokes: '',
   ));
+
+  late final kanjiComposite = asyncMap<String, List<CompositeData>>(
+    literal,
+    loadComposite,
+    [],
+  );
 
   final CarouselSliderController controller = CarouselSliderController();
 
   Home({super.key}) {
-    onNext();
-  }
-
-  void onNext() async {
-    final repository = await Repository.getInstance();
-
-    if (literals.value.isEmpty) {
-      final literals = await repository.randomKankenLiterals(kankenLevel);
-      this.literals.value = literals;
-    }
-
-    final [head, ...tail] = literals.value;
-    literals.value = tail;
-    template.value = await repository.strokes(head);
-    final kanji = await repository.info(head);
-    final composite = await repository.composite(head);
-    sliderData.value = (kanji: kanji, composite: composite);
+    command.value = Initialize('10', true);
   }
 
   @override
@@ -88,7 +111,10 @@ class Home extends StatelessWidget {
               width: width,
               height: height,
               child: SignalBuilder(
-                builder: (context) => KanjiSlider(data: sliderData.value),
+                builder: (context) => KanjiCarousel(
+                  kanjiInfo: kanjiInfo.value,
+                  kanjiComposite: kanjiComposite.value,
+                ),
               ),
             ),
             sizedBox(
@@ -96,12 +122,48 @@ class Home extends StatelessWidget {
               height: height,
               child: Column(
                 children: [
-                  SizedBox(height: 120),
+                  SizedBox(height: 40),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SignalBuilder(
+                        builder: (context) {
+                          final level = literals.value.level;
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
+                            child: Text('Kanji Kentei Level: $level'),
+                          );
+                        },
+                      ),
+                      SizedBox(height: 20),
+                      SizedBox(
+                        width: width * 0.8,
+                        child: SignalBuilder(
+                          builder: (context) {
+                            final value = kankenIndex(literals.value.level);
+                            return CupertinoSlider(
+                              min: 0,
+                              max: 11,
+                              value: value.toDouble(),
+                              divisions: 12,
+                              onChanged: (value) {
+                                final level = kankenLevel(
+                                  value.round().toInt(),
+                                );
+                                command.value = Initialize(level);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 80),
                   SignalBuilder(
                     builder: (context) {
                       return KanjiDraw(
                         template: template.value,
-                        onNext: onNext,
+                        onNext: () => command.value = Next(),
                       );
                     },
                   ),

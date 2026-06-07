@@ -6,17 +6,22 @@ import 'kanji_composite.dart';
 
 typedef SliderData = ({KanjiData kanji, List<CompositeData> composite});
 
-class KanjiSlider extends StatelessWidget {
-  final SliderData data;
+class KanjiCarousel extends StatelessWidget {
+  final KanjiData? kanjiInfo;
+  final List<CompositeData> kanjiComposite;
   final CarouselSliderController controller = CarouselSliderController();
 
-  KanjiSlider({super.key, required this.data});
+  KanjiCarousel({
+    super.key,
+    required this.kanjiInfo,
+    required this.kanjiComposite,
+  });
 
   @override
   Widget build(BuildContext context) {
     final children = [
-      KanjiInfo(data: data.kanji),
-      KanjiComposite(data: data.composite),
+      KanjiInfo(data: kanjiInfo),
+      KanjiComposite(data: kanjiComposite),
     ];
 
     return CarouselSlider(

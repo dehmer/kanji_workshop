@@ -12,7 +12,7 @@ String formatReading(String reading) {
 }
 
 class KanjiInfo extends StatelessWidget {
-  final KanjiData data;
+  final KanjiData? data;
   const KanjiInfo({super.key, required this.data});
 
   @override
@@ -25,23 +25,23 @@ class KanjiInfo extends StatelessWidget {
           Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 0, 0),
             child: Text(
-              data.meaning,
+              data?.meaning ?? '',
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 16),
             ),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(10, 0, 0, 0),
-            child: Text(data.literal, style: TextStyle(fontSize: 80)),
+            child: Text(data?.literal ?? '', style: TextStyle(fontSize: 80)),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 0, 0),
-            child: Text(data.strokes, style: TextStyle(fontSize: 16)),
+            child: Text(data?.strokes ?? '', style: TextStyle(fontSize: 16)),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(24, 16, 0, 0),
             child: VerticalText(
-              formatReading(data.reading),
+              formatReading(data?.reading ?? ''),
               style: const VerticalTextStyle(
                 baseStyle: TextStyle(fontSize: 20),
                 characterSpacing: 4,
