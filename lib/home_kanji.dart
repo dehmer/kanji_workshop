@@ -129,9 +129,13 @@ class Home extends StatelessWidget {
                       SignalBuilder(
                         builder: (context) {
                           final level = literals.value.level;
+                          final count = literals.value.count;
+                          final remaining = literals.value.remaining.length;
                           return Padding(
                             padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-                            child: Text('Kanji Kentei Level: $level'),
+                            child: Text(
+                              'Kanji Kentei Level: $level [$remaining/$count]',
+                            ),
                           );
                         },
                       ),
@@ -162,6 +166,7 @@ class Home extends StatelessWidget {
                   SignalBuilder(
                     builder: (context) {
                       return KanjiDraw(
+                        literal: literal.value,
                         template: template.value,
                         onNext: () => command.value = Next(),
                       );

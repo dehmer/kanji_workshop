@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'scene/scene.dart';
 import 'polyline.dart';
 
-const strokeWidth = 6.0;
+const strokeWidth = 4.0;
 final black = Paint()
   ..style = PaintingStyle.stroke
   ..color = Colors.black
@@ -11,7 +11,10 @@ final black = Paint()
   ..strokeCap = StrokeCap.round
   ..strokeJoin = StrokeJoin.round;
 
-final gray = Paint.from(black)..color = Color(0xffd0d0d0);
+final gray = Paint.from(black)
+  ..color = Color(0xffd0d0d0)
+  ..strokeWidth = strokeWidth;
+
 final red = Paint.from(black)..color = Color(0xffff0000);
 final blue = Paint.from(black)..color = Color.fromARGB(255, 110, 133, 237);
 final ok = Paint.from(black)..color = Color.fromARGB(255, 110, 133, 237);
@@ -87,32 +90,18 @@ Path Function(PolylineList) createScaledPath(double s) {
 }
 
 class ScenePainter extends CustomPainter {
-  final double dimension;
   final Scene scene;
+  final double dimension;
 
   const ScenePainter(this.scene, this.dimension);
 
   @override
   void paint(Canvas canvas, Size size) {
     final createPath = createScaledPath(dimension);
-    final template = createPath(scene.template);
+    final template = createPath(scene.target);
+    final actual = createPath(scene.actual);
 
-    // Drop last stroke of previous if animation is in progress:
-    final previousLength = scene.previous.length;
-    final previous = switch (scene.frame.isNotEmpty) {
-      true => createPath(scene.previous.sublist(0, previousLength - 1)),
-      false => createPath(scene.previous),
-    };
-
-    final hint = createPath([
-      switch (scene.misses) {
-        2 => scene.template[previousLength].sublist(0, 2),
-        3 => scene.template[previousLength],
-        _ => [],
-      },
-    ]);
-
-    createPath(scene.previous);
+    createPath(scene.actual);
     final current = createPath([scene.current]);
     final frame = createPath(scene.frame);
 
@@ -132,20 +121,23 @@ class ScenePainter extends CustomPainter {
       );
     }
 
-    if (scene.templateVisible) {
+    if (scene.targetVisible) {
       canvas.drawPath(template, gray);
     }
 
     // Depending on animation frame, draw previous and/or current.
-    final complete = scene.previous.length == scene.template.length;
+    final complete =
+        scene.actual.isNotEmpty &&
+        scene.actual.length == scene.target.length &&
+        scene.frame.isEmpty;
+
     if (scene.frame.isEmpty) canvas.drawPath(current, black);
     final drawPrevious = scene.frame.isEmpty || scene.frame.length == 1;
     final drawCurrent = scene.frame.isEmpty;
 
-    if (drawPrevious) canvas.drawPath(previous, complete ? ok : black);
+    if (drawPrevious) canvas.drawPath(actual, complete ? ok : black);
     if (drawCurrent) canvas.drawPath(current, black);
     canvas.drawPath(frame, black);
-    canvas.drawPath(hint, red);
   }
 
   @override

@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:signals/signals_flutter.dart';
 
 FlutterSignal<T> loop<T, I>(
-  ReadonlySignal<I> signal,
+  ReadonlySignal<I> command,
   FutureOr<T> Function(T, I) fn,
   T acc,
 ) {
   FlutterSignal<T> self = FlutterSignal<T>(acc);
-  signal.subscribe((input) async {
+  command.subscribe((input) async {
     self.value = await fn(self.value, input);
   });
 

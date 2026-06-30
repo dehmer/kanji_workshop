@@ -140,4 +140,20 @@ class Repository {
 
     return rows.map(parse).toList();
   }
+
+  Future<List<String>> katakana() async {
+    final query =
+        "SELECT literal FROM kana WHERE class = 'KATAKANA' AND sub_class = ''";
+    final rows = await database.rawQuery(query);
+    String parse(Map<String, Object?> row) => row['literal'].toString();
+    return rows.map(parse).toList();
+  }
+
+  Future<List<String>> hiragana() async {
+    final query =
+        "SELECT literal FROM kana WHERE class = 'HIRAGANA' AND sub_class = ''";
+    final rows = await database.rawQuery(query);
+    String parse(Map<String, Object?> row) => row['literal'].toString();
+    return rows.map(parse).toList();
+  }
 }

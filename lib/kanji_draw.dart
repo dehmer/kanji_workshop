@@ -5,49 +5,51 @@ import 'extensions/signal_extensions.dart';
 import 'polyline.dart';
 import 'scene_painter.dart';
 import 'scene/scene.dart';
-import 'scene/command.dart';
-import 'scene/behavior.dart';
 
-const double canvasDimension = 150.0;
+const double canvasDimension = 110.0;
 const double buttonSize = 30.0;
+Offset scalePosition(Offset position) => position / canvasDimension;
 
 class KanjiDraw extends StatelessWidget {
+  final String literal;
   final PolylineList template;
   final void Function() onNext;
 
-  final command = signal<SceneCommand>(NullCommand());
-  late final behavior = Behavior(command);
+  final feed = signal<SceneCommand>(NullCommand());
   late final scene = loop<Scene, SceneCommand>(
-    command,
+    feed,
     (acc, command) => acc.reduce(command),
-    Scene(template: template, behavior: StrokeByStroke(command)),
+    Scene(
+      feed: feed,
+      literal: literal,
+      scalePosition: scalePosition,
+      target: template,
+    ),
   );
 
-  late final templateVisible = scene.map((scene) => scene.templateVisible);
+  late final templateVisible = scene.map((scene) => scene.targetVisible);
   late final gridVisible = scene.map((scene) => scene.gridVisible);
 
-  KanjiDraw({super.key, required this.template, required this.onNext});
+  KanjiDraw({
+    super.key,
+    required this.literal,
+    required this.template,
+    required this.onNext,
+  });
 
-  // Forward drag events to scene.
-
-  void onPanStart(DragStartDetails details) =>
-      command.value = DragStart(details.localPosition / canvasDimension);
-
-  void onPanUpdate(DragUpdateDetails details) =>
-      command.value = DragUpdate(details.localPosition / canvasDimension);
-
-  void onPanEnd(DragEndDetails details) =>
-      command.value = DragEnd(details.localPosition / canvasDimension);
+  void onPointer(PointerEvent event) {
+    feed.value = Event(event);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
         children: [
-          GestureDetector(
-            onPanStart: onPanStart,
-            onPanUpdate: onPanUpdate,
-            onPanEnd: onPanEnd,
+          Listener(
+            onPointerDown: onPointer,
+            onPointerMove: onPointer,
+            onPointerUp: onPointer,
             child: Container(
               width: canvasDimension,
               height: canvasDimension,
@@ -73,7 +75,7 @@ class KanjiDraw extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CupertinoButton(
-                  onPressed: () => command.value = Reset(),
+                  onPressed: () => feed.value = Reset(),
                   child: Icon(
                     CupertinoIcons.restart,
                     color: Colors.pink,
@@ -89,7 +91,7 @@ class KanjiDraw extends StatelessWidget {
                   ),
                 ),
                 CupertinoButton(
-                  onPressed: () => command.value = ToggleTemplate(),
+                  onPressed: () => feed.value = ToggleTarget(),
                   child: SignalBuilder(
                     builder: (context) {
                       return Icon(
@@ -103,7 +105,7 @@ class KanjiDraw extends StatelessWidget {
                   ),
                 ),
                 CupertinoButton(
-                  onPressed: () => command.value = ToggleGrid(),
+                  onPressed: () => feed.value = ToggleGrid(),
                   child: SignalBuilder(
                     builder: (context) {
                       return Icon(

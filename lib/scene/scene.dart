@@ -1,95 +1,215 @@
-import 'package:flutter/foundation.dart' show immutable;
+import 'package:flutter/material.dart';
+import 'package:signals/signals_flutter.dart';
 import '../polyline.dart';
-import '../scene/command.dart';
-import '../scene/behavior.dart';
+import '../dtw.dart';
+import '../scene/animate.dart';
+import '../request_sender.dart';
 
-@immutable
+final sender = LineStringSender();
+
+sealed class SceneCommand {}
+
+class NullCommand extends SceneCommand {}
+
+class Reset extends SceneCommand {}
+
+class Event extends SceneCommand {
+  final PointerEvent event;
+  Event(this.event);
+}
+
+class AnimationFrame extends SceneCommand {
+  final PolylineList frame;
+  AnimationFrame(this.frame);
+}
+
+class AnimationEnd extends SceneCommand {
+  final Polyline current;
+  AnimationEnd(this.current);
+}
+
+class ToggleTarget extends SceneCommand {
+  ToggleTarget();
+}
+
+class ToggleGrid extends SceneCommand {
+  ToggleGrid();
+}
+
 class Scene {
-  final Behavior behavior;
-  final bool templateVisible;
+  final FlutterSignal<SceneCommand> feed;
+  final String literal;
+  final Offset Function(Offset) scalePosition;
+  final List<PointerEvent> events;
+  final bool targetVisible;
   final bool gridVisible;
-  final PolylineList template;
-  final PolylineList previous;
+  final PolylineList target;
+  final PolylineList actual;
   final Polyline current;
 
   /// Animation frame for one or multiple strokes.
   final PolylineList frame;
-  final int misses;
 
-  const Scene({
-    required this.behavior,
-    bool? templateVisible,
+  Scene({
+    required this.feed,
+    required this.literal,
+    required this.scalePosition,
+    List<PointerEvent>? events,
+    bool? targetVisible,
     bool? gridVisible,
-    PolylineList? template,
-    PolylineList? previous,
+    PolylineList? target,
+    PolylineList? actual,
     Polyline? current,
     PolylineList? frame,
-    int? misses,
-  }) : templateVisible = templateVisible ?? true,
+  }) : events = events ?? const [],
+       targetVisible = targetVisible ?? true,
        gridVisible = gridVisible ?? true,
-       template = template ?? const [],
-       previous = previous ?? const [],
+       target = target ?? const [],
+       actual = actual ?? const [],
        current = current ?? const [],
-       frame = frame ?? const [],
-       misses = misses ?? 0;
+       frame = frame ?? const [];
 
   Scene copyWith({
-    bool? templateVisible,
+    List<PointerEvent>? events,
+    bool? targetVisible,
     bool? gridVisible,
-    PolylineList? template,
-    PolylineList? previous,
+    PolylineList? target,
+    PolylineList? actual,
     Polyline? current,
     PolylineList? frame,
-    int? misses,
   }) => Scene(
-    behavior: behavior,
-    templateVisible: templateVisible ?? this.templateVisible,
+    feed: feed,
+    literal: literal,
+    scalePosition: scalePosition,
+    events: events ?? this.events,
+    targetVisible: targetVisible ?? this.targetVisible,
     gridVisible: gridVisible ?? this.gridVisible,
-    template: template ?? this.template,
-    previous: previous ?? this.previous,
+    target: target ?? this.target,
+    actual: actual ?? this.actual,
     current: current ?? this.current,
     frame: frame ?? this.frame,
-    misses: misses ?? this.misses,
   );
 
   Scene reduce(SceneCommand command) => switch (command) {
-    Initialize() => initialize(command),
-    DragStart() => dragStart(command),
-    DragUpdate() => dragUpdate(command),
-    DragEnd() => dragEnd(command),
-    Reset() => copyWith(previous: [], current: [], misses: 0),
+    Event() => event(command),
+    Reset() => copyWith(actual: [], current: [], events: []),
     AnimationFrame(frame: final f) => copyWith(frame: f),
     AnimationEnd() => animationEnd(command),
-    ToggleTemplate() => copyWith(templateVisible: !templateVisible),
+    ToggleTarget() => copyWith(targetVisible: !targetVisible),
     ToggleGrid() => copyWith(gridVisible: !gridVisible),
     NullCommand() => this,
   };
 
-  Scene dragStart(DragStart command) {
-    if (previous.length == template.length) return this;
-    return behavior.dragStart(command, this);
+  void animateStroke(Polyline current, Polyline target) {
+    void callback(t) {
+      Offset lerp(i) => Offset.lerp(current[i], target[i], t)!;
+      final frame = List.generate(target.length, lerp);
+      feed.value = AnimationFrame([frame]);
+    }
+
+    void end() => feed.value = AnimationEnd(target);
+    animate(callback: callback, end: end);
   }
 
-  Scene dragUpdate(DragUpdate command) {
-    if (previous.length == template.length) return this;
-    return copyWith(current: [...current, command.position]);
+  Scene match(List<PointerEvent> events, Polyline current, Polyline target) {
+    // Don't add current stroke to actual strokes.
+    // Coresponding stroke from target is added at the end of animation.
+
+    // without animation:
+    // final actual = [...this.actual, current];
+    // if (actual.isNotEmpty && actual.length == this.target.length) {
+    //   sender.sendEvents(literal, scalePosition, events);
+    // }
+    // return copyWith(events: events, actual: actual, current: []);
+
+    // with animation:
+    animateStroke(current, target);
+    return copyWith(events: events, current: []);
   }
 
-  Scene dragEnd(DragEnd command) {
-    if (previous.length == template.length) return this;
-    return behavior.dragEnd(command, this);
+  Scene mismatch(List<PointerEvent> events, Polyline current, Polyline target) {
+    // Remove events for last stroke (current).
+    events.removeLast();
+    while (events.isNotEmpty && events.last.down) {
+      events.removeLast();
+    }
+
+    return copyWith(current: [], events: events);
   }
 
-  Scene initialize(Initialize command) {
-    return copyWith(
-      template: command.template,
-      previous: [],
-      current: [],
-      frame: [],
-    );
+  Scene pointerDown(List<PointerEvent> events) {
+    final event = events.last;
+    final current = [...this.current, scalePosition(event.localPosition)];
+    return copyWith(events: events, current: current);
+  }
+
+  Scene pointerMove(List<PointerEvent> events) {
+    final event = events.last;
+    final current = [...this.current, scalePosition(event.localPosition)];
+    return copyWith(events: events, current: current);
+  }
+
+  Scene pointerUp(List<PointerEvent> events) {
+    final event = events.last;
+
+    final target = this.target[actual.length];
+    Polyline current = [...this.current, scalePosition(event.localPosition)];
+    current = resample(this.current, target.length);
+
+    if (current.length < 2) {
+      return mismatch(events, current, target);
+    }
+
+    final distance = PolylineDTW.compare(target, current);
+    return switch (distance) {
+      < 0.04 => match(events, current, target),
+      _ => mismatch(events, current, target),
+    };
+  }
+
+  Scene event(Event command) {
+    if (actual.length == target.length) return this;
+    final PointerEvent event = command.event;
+
+    // Unconditionally add event to event list.
+    final events = [...this.events, event];
+
+    return switch (event) {
+      PointerDownEvent() => pointerDown(events),
+      PointerMoveEvent() => pointerMove(events),
+      PointerUpEvent() => pointerUp(events),
+      _ => this,
+    };
+
+    // if (event is PointerDownEvent) {
+    //   // Ignore pointer down in general.
+    //   return this;
+    // } else if (event is PointerMoveEvent) {
+    //   // Ignore move for distance squared = 0 and a pressure too low.
+    //   if (event.delta.distanceSquared == 0 || event.pressure < 0.4) {
+    //     return this;
+    //   } else {
+    //     return eventDown([...events, fromEvent(event)]);
+    //   }
+    // } else {
+    //   // No need to handle up:
+    //   if (events.isEmpty) return this;
+
+    //   // Don't add up-event, but set previous/last event to pen up.
+    //   events.last = (
+    //     position: events.last.position,
+    //     delta: events.last.delta,
+    //     timeStamp: events.last.timeStamp,
+    //     pressure: events.last.pressure,
+    //     down: false,
+    //   );
+
+    //   return eventUp(events);
+    // }
   }
 
   Scene animationEnd(AnimationEnd command) {
-    return copyWith(frame: []);
+    final actual = [...this.actual, command.current];
+    return copyWith(actual: actual, frame: []);
   }
 }

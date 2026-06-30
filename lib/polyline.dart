@@ -56,6 +56,8 @@ double polylineLength(Polyline xs) {
 /// This is important because DTW behaves much better when both
 /// lines have approximately uniform sampling density.
 List<Offset> resample(List<Offset> points, int samples) {
+  // TODO: resample: remove start/end points for improved accuracy
+
   if (points.length < 2) {
     return List.of(points);
   }

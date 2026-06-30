@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'home.dart';
+// import 'home_kana.dart';
+import 'home_kanji.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
